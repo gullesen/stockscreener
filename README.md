@@ -1,2 +1,2 @@
-# stockstcreener
+# stockscreener
 Personal stock screener
