@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v4.7</title>
+    <title>StockScreener Pro v4.8</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -43,7 +43,9 @@
         .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .ticker { font-size: 20px; font-weight: 800; }
         .price { font-size: 20px; font-weight: 700; }
-        .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); margin-left: 5px; font-weight: 900; }
+        
+        .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); margin-left: 4px; font-weight: 900; vertical-align: middle; }
+        .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 4px; }
 
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
@@ -67,6 +69,9 @@
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
         
+        .gav-section { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; text-align: center; }
+        .gav-input { background: #2c2c2e; border: none; color: white; padding: 10px; border-radius: 8px; width: 80px; text-align: center; font-size: 16px; margin: 10px 0; }
+
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
         .tech-row:last-child { border-bottom: none; }
@@ -121,6 +126,7 @@
     let currentFilter = 'all';
     let myStocks = JSON.parse(localStorage.getItem('myStocks')) || [];
     let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
+    let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let currentChart = null;
 
     const tooltips = {
@@ -169,6 +175,14 @@
         render();
     }
 
+    function saveGAV(ticker, val) {
+        if (!val || val == 0) delete myGAVs[ticker];
+        else myGAVs[ticker] = parseFloat(val);
+        localStorage.setItem('myGAVs', JSON.stringify(myGAVs));
+        openDetail(ticker);
+        render();
+    }
+
     function setFilter(f) {
         currentFilter = f;
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active-filter'));
@@ -187,11 +201,25 @@
         const detail = document.getElementById('detailContent');
         const inMine = myStocks.includes(ticker);
         const inRadar = radarStocks.includes(ticker);
+        const gav = myGAVs[ticker] || "";
+        
+        let profitHtml = "";
+        if (gav) {
+            const diff = ((s["Siste kurs"] - gav) / gav) * 100;
+            profitHtml = `<div style="color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-size:18px; margin-top:5px;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%</div>`;
+        }
 
         detail.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:36px; font-weight:900;">${s.Aksje}</div>
                 <div style="font-size:26px; font-weight:800;">${s["Siste kurs"].toFixed(2)}</div>
+                ${profitHtml}
+            </div>
+
+            <div class="gav-section">
+                <span class="label">Min GAV</span><br>
+                <input type="number" class="gav-input" value="${gav}" placeholder="0.00" onchange="saveGAV('${ticker}', this.value)">
+                <div style="font-size:10px; color:var(--secondary)">Skriv inn din kjøpskurs for å se gevinst</div>
             </div>
 
             <div class="time-row">
@@ -283,20 +311,34 @@
             return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
 
-        document.getElementById('list').innerHTML = filtered.map(s => `
-            <div class="stock-card" onclick="openDetail('${s.Aksje}')">
-                <div class="row-top">
-                    <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${radarStocks.includes(s.Aksje)?'<span class="list-badge" style="color:var(--blue)">RADAR</span>':''}</span>
-                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
+        document.getElementById('list').innerHTML = filtered.map(s => {
+            const gav = myGAVs[s.Aksje];
+            let profitHtml = "";
+            if (gav) {
+                const diff = ((s["Siste kurs"] - gav) / gav) * 100;
+                profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`;
+            }
+
+            return `
+                <div class="stock-card" onclick="openDetail('${s.Aksje}')">
+                    <div class="row-top">
+                        <span class="ticker">
+                            ${s.Aksje} 
+                            ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} 
+                            ${radarStocks.includes(s.Aksje)?'<span class="list-badge" style="color:var(--blue)">RADAR</span>':''}
+                            ${profitHtml}
+                        </span>
+                        <span class="price">${s["Siste kurs"].toFixed(2)}</span>
+                    </div>
+                    <div class="row-indicators">
+                        <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                        <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
+                        <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val">${s.MACD_Trend}</span></div>
+                        <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
+                    </div>
                 </div>
-                <div class="row-indicators">
-                    <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val">${s.MACD_Trend}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function closeDetail() { document.getElementById('detailPage').style.display = 'none'; document.body.style.overflow = 'auto'; }
