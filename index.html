@@ -1,135 +1,7 @@
-<!DOCTYPE html>
-<html lang="no">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg: #000000;
-            --card: #1c1c1e;
-            --text: #ffffff;
-            --secondary: #8e8e93;
-            --green: #32d74b;
-            --red: #ff453a;
-            --blue: #0a84ff;
-        }
-        body { 
-            font-family: -apple-system, system-ui; 
-            background: var(--bg); color: var(--text); 
-            margin: 0; padding: env(safe-area-inset-top) 15px 100px 15px;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
-        h1 { font-size: 32px; font-weight: 800; margin: 5px 0 15px 0; }
-        input, .sort-btn { 
-            width: 100%; padding: 12px; border-radius: 12px; 
-            border: none; background: var(--card); color: var(--text); 
-            font-size: 16px; margin-bottom: 8px; box-sizing: border-box; outline: none;
-        }
-        .sort-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
-
-        .stock-card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 10px; }
-        .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .ticker { font-size: 19px; font-weight: 800; }
-        .price { font-size: 19px; font-weight: 700; }
-        
-        .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
-        .mini-stat { display: flex; flex-direction: column; align-items: flex-start; }
-        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
-        .val { font-size: 13px; font-weight: 700; }
-        .info-i { font-size: 12px; color: var(--blue); font-style: normal; }
-
-        /* MODAL / DETALJSIDE */
-        #detailPage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
-            padding: env(safe-area-inset-top) 20px 50px 20px; box-sizing: border-box;
-        }
-        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .info-box { background: var(--card); padding: 12px; border-radius: 14px; }
-        .tech-list { background: var(--card); border-radius: 14px; padding: 5px 15px; margin-top: 20px; }
-        .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
-
-        /* NYTT TOOLTIP SYSTEM */
-        #tooltipToast {
-            position: fixed; bottom: -100px; left: 20px; right: 20px;
-            background: #2c2c2e; color: white; padding: 16px;
-            border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            z-index: 3000; transition: bottom 0.3s ease-out;
-            font-size: 14px; line-height: 1.4;
-            border-left: 4px solid var(--blue);
-        }
-        #tooltipToast.active { bottom: 30px; }
-    </style>
-</head>
-<body>
-
-<div class="sticky-header">
-    <h1>Screener</h1>
-    <input type="text" id="search" placeholder="Søk ticker..." onkeyup="render()">
-    <div class="sort-row">
-        <div id="btn-rsi" class="sort-btn" style="text-align:center" onclick="setSort('rsi')">RSI</div>
-        <div id="btn-volum" class="sort-btn" style="text-align:center" onclick="setSort('volum')">Volum</div>
-        <div id="btn-rr" class="sort-btn" style="text-align:center" onclick="setSort('rr')">R/R</div>
-        <div id="btn-ticker" class="sort-btn" style="text-align:center" onclick="setSort('ticker')">Navn</div>
-    </div>
-</div>
-
-<div id="list">Laster data...</div>
-
-<div id="detailPage">
-    <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
-    <div id="detailContent"></div>
-</div>
-
-<div id="tooltipToast" onclick="hideTip()"></div>
-
 <script>
-    let stocks = [];
-    let currentSort = 'ticker';
-    let isAscending = true;
+    // ... (resten av koden forblir lik)
 
-    const tooltips = {
-        rsi: "<b>RSI (14):</b> Måler momentum. Under 30 er oversolgt (billig), over 70 er overkjøpt (dyrt).",
-        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers snitt. Høyt volum bekrefter styrke.",
-        rr: "<b>Risk/Reward:</b> Oppside til motstand delt på nedside til støtte. Bør være over 2.0.",
-        trend: "<b>MACD Trend:</b> Bull (stigende) eller Bear (fallende) momentum.",
-        sma: "<b>SMA 50/200:</b> Glidende snitt. 50 over 200 er et sterkt kjøpssignal.",
-        ema: "<b>EMA 9/20:</b> Eksponentielle snitt som reagerer raskt på prisendringer.",
-        boll: "<b>Bollinger:</b> Volatilitetsbånd. Prisen holder seg normalt innenfor disse.",
-        support: "<b>Støtte/Motstand:</b> Historiske nivåer hvor prisen ofte snur."
-    };
-
-    const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
-
-    async function load() {
-        const res = await fetch(DATA_URL);
-        stocks = await res.json();
-        render();
-    }
-
-    function showTip(e, key) {
-        e.stopPropagation();
-        const toast = document.getElementById('tooltipToast');
-        toast.innerHTML = tooltips[key];
-        toast.classList.add('active');
-        setTimeout(hideTip, 4000);
-    }
-
-    function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
-
-    function setSort(field) {
-        if (currentSort === field) { isAscending = !isAscending; } 
-        else { currentSort = field; isAscending = (field === 'ticker' || field === 'rsi'); }
-        render();
-    }
+    let currentChart = null; // Lagre graf-instansen for å kunne oppdatere den
 
     function openDetail(ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
@@ -142,92 +14,73 @@
                 <div style="font-size:26px; font-weight:800;">${s["Siste kurs"].toFixed(2)}</div>
                 <div onclick="showTip(event, 'trend')" style="color:${s.MACD_Trend==='Bull'?'#32d74b':'#ff453a'}; font-weight:900; font-size:12px; margin-top:5px;">${s.MACD_Trend.toUpperCase()} TREND ⓘ</div>
             </div>
+
+            <div style="display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px;">
+                <div class="time-btn active" id="t-5" onclick="updateTime(5, '${s.Aksje}')">1U</div>
+                <div class="time-btn" id="t-21" onclick="updateTime(21, '${s.Aksje}')">1M</div>
+                <div class="time-btn" id="t-63" onclick="updateTime(63, '${s.Aksje}')">3M</div>
+                <div class="time-btn" id="t-126" onclick="updateTime(126, '${s.Aksje}')">6M</div>
+                <div class="time-btn" id="t-250" onclick="updateTime(250, '${s.Aksje}')">1Å</div>
+            </div>
             
-            <div style="background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px;">
+            <div style="background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; height: 220px;">
                 <canvas id="mainChart"></canvas>
             </div>
 
-            <div class="info-grid">
-                <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI (14) ⓘ</div><div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div></div>
-                <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Volumøkning ⓘ</div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
-                <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">Risk/Reward ⓘ</div><div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div></div>
-                <div class="info-box"><div class="label">MACD</div><div class="val">${s.MACD.toFixed(2)}</div></div>
-            </div>
+            `;
 
-            <div class="tech-list">
-                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'boll')"><span>Bollinger O/N ⓘ</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / Motstand ⓘ</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
-            </div>
-        `;
-        
+        // CSS for tidsknappene (legg dette i <style> feltet ditt)
+        /*
+        .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; cursor: pointer; }
+        .time-btn.active { background: #3a3a3c; color: white; }
+        */
+
         page.style.display = 'block';
         document.body.style.overflow = 'hidden';
         
+        // Initialiser grafen med 1 måned (21 dager) som default
+        updateTime(21, s.Aksje);
+    }
+
+    function updateTime(dager, ticker) {
+        const s = stocks.find(x => x.Aksje === ticker);
+        const dataSnippet = s.Historikk.slice(-dager);
+        
+        // Oppdater knapp-styling
+        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('t-' + dager);
+        if(btn) btn.classList.add('active');
+
         const ctx = document.getElementById('mainChart').getContext('2d');
-        new Chart(ctx, {
+        
+        if (currentChart) { currentChart.destroy(); } // Fjern gammel graf før ny tegnes
+
+        currentChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: s.Historikk.map(h => ""),
+                labels: dataSnippet.map(h => h.dato),
                 datasets: [{
-                    data: s.Historikk.map(h => h.pris),
+                    data: dataSnippet.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
                     borderWidth: 3,
                     pointRadius: 0,
-                    tension: 0.2
+                    tension: 0.2,
+                    fill: true,
+                    backgroundColor: s.RS_dag >= 0 ? 'rgba(50, 215, 75, 0.1)' : 'rgba(255, 69, 58, 0.1)'
                 }]
             },
             options: { 
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } }, 
-                scales: { x: { display: false }, y: { grid: { color: '#2c2c2e' } } } 
+                scales: { 
+                    x: { display: false }, 
+                    y: { 
+                        grid: { color: '#2c2c2e' },
+                        ticks: { color: '#8e8e93', font: { size: 10 } }
+                    } 
+                } 
             }
         });
     }
-
-    function closeDetail() {
-        document.getElementById('detailPage').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-
-    function render() {
-        const query = document.getElementById('search').value.toUpperCase();
-        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
-        const activeBtn = document.getElementById('btn-' + currentSort);
-        activeBtn.classList.add('active-sort');
-        activeBtn.innerHTML = currentSort.toUpperCase() + (isAscending ? " ↑" : " ↓");
-
-        let filtered = stocks.filter(s => s.Aksje.toUpperCase().includes(query));
-
-        filtered.sort((a, b) => {
-            let valA, valB;
-            if(currentSort === 'rsi') { valA = a.RSI_14; valB = b.RSI_14; }
-            else if(currentSort === 'volum') { valA = a.Volum_vs_Snitt; valB = b.Volum_vs_Snitt; }
-            else if(currentSort === 'rr') { valA = a.Risk_Reward; valB = b.Risk_Reward; }
-            else { valA = a.Aksje; valB = b.Aksje; }
-            if (valA < valB) return isAscending ? -1 : 1;
-            if (valA > valB) return isAscending ? 1 : -1;
-            return 0;
-        });
-
-        document.getElementById('list').innerHTML = filtered.map(s => `
-            <div class="stock-card" onclick="openDetail('${s.Aksje}')">
-                <div class="row-top">
-                    <span class="ticker">${s.Aksje}</span>
-                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
-                </div>
-                <div class="row-indicators">
-                    <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend.toUpperCase()}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.RSI_14 < 35 ? 'var(--green)' : (s.RSI_14 > 65 ? 'var(--red)' : 'white')}">${s.RSI_14.toFixed(0)}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.Risk_Reward > 2 ? 'var(--green)' : 'white'}">${s.Risk_Reward.toFixed(1)}</span></div>
-                </div>
-            </div>
-        `).join('');
-    }
-    load();
 </script>
-</body>
-</html>
