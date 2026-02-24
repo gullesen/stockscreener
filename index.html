@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v4.5</title>
+    <title>StockScreener Pro v4.6</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,6 +24,8 @@
             margin: 0; padding: env(safe-area-inset-top) 15px 120px 15px;
             -webkit-tap-highlight-color: transparent;
         }
+        
+        /* HOVEDSIDE ELEMENTER */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
         h1 { font-size: 32px; font-weight: 800; margin: 5px 0 10px 0; }
         input, .sort-btn, .filter-btn { 
@@ -37,32 +39,41 @@
         .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
-        .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; }
+        .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .ticker { font-size: 20px; font-weight: 800; }
         .price { font-size: 20px; font-weight: 700; }
-        .list-badge { font-size: 10px; background: #3a3a3c; padding: 2px 6px; border-radius: 4px; color: var(--orange); margin-left: 5px; }
+        .list-badge { font-size: 10px; background: #3a3a3c; padding: 2px 6px; border-radius: 4px; color: var(--orange); margin-left: 5px; font-weight: 900; }
 
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
         .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 700; }
 
+        /* DETALJSIDE (AKSJESIDEN) */
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
-            padding: env(safe-area-inset-top) 20px 100px 20px; box-sizing: border-box;
+            padding: env(safe-area-inset-top) 20px 120px 20px; box-sizing: border-box;
         }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; }
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
+        
         .chart-container { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; height: 260px; }
         
-        /* LISTE-KNAPPER */
-        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .action-btn { padding: 12px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .action-btn.in-list { background: var(--orange); border-color: var(--orange); color: black; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
+        
+        .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 30px; }
+        .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
+        .tech-row:last-child { border-bottom: none; }
+
+        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; padding-bottom: 40px; }
+        .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
+        .action-btn.active-mine { background: rgba(255, 159, 10, 0.2); border-color: var(--orange); color: var(--orange); }
+        .action-btn.active-radar { background: rgba(10, 132, 255, 0.2); border-color: var(--blue); color: var(--blue); }
 
         #tooltipToast {
             position: fixed; bottom: -100px; left: 20px; right: 20px;
@@ -90,7 +101,7 @@
     </div>
 </div>
 
-<div id="list">Laster...</div>
+<div id="list">Laster data...</div>
 
 <div id="detailPage">
     <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
@@ -108,6 +119,13 @@
     let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
     let currentChart = null;
 
+    const tooltips = {
+        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
+        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers snitt. Høyt volum bekrefter styrke.",
+        rr: "<b>Risk/Reward:</b> Oppside til motstand delt på nedside til støtte. Bør være over 2.0.",
+        trend: "<b>Trend:</b> Indikerer om momentumet er BULL (opp) eller BEAR (ned)."
+    };
+
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
 
     async function load() {
@@ -116,16 +134,29 @@
         render();
     }
 
+    function showTip(key) {
+        const toast = document.getElementById('tooltipToast');
+        toast.innerHTML = tooltips[key];
+        toast.classList.add('active');
+        setTimeout(hideTip, 4000);
+    }
+    function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
+
     function toggleList(ticker, listType) {
-        let list = listType === 'mine' ? myStocks : radarStocks;
-        const idx = list.indexOf(ticker);
-        if (idx > -1) list.splice(idx, 1);
-        else list.push(ticker);
-        
-        if (listType === 'mine') { myStocks = list; localStorage.setItem('myStocks', JSON.stringify(myStocks)); }
-        else { radarStocks = list; localStorage.setItem('radarStocks', JSON.stringify(radarStocks)); }
-        
-        openDetail(ticker); // Refresh view
+        if (listType === 'mine') {
+            const idx = myStocks.indexOf(ticker);
+            if (idx > -1) myStocks.splice(idx, 1);
+            else { myStocks.push(ticker); const rIdx = radarStocks.indexOf(ticker); if(rIdx > -1) radarStocks.splice(rIdx, 1); }
+            localStorage.setItem('myStocks', JSON.stringify(myStocks));
+            localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
+        } else {
+            const idx = radarStocks.indexOf(ticker);
+            if (idx > -1) radarStocks.splice(idx, 1);
+            else { radarStocks.push(ticker); const mIdx = myStocks.indexOf(ticker); if(mIdx > -1) myStocks.splice(mIdx, 1); }
+            localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
+            localStorage.setItem('myStocks', JSON.stringify(myStocks));
+        }
+        openDetail(ticker);
         render();
     }
 
@@ -164,16 +195,35 @@
 
             <div class="chart-container"><canvas id="mainChart"></canvas></div>
 
-            <div class="list-actions">
-                <button class="action-btn ${inMine?'in-list':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine aksjer':'+ Mine aksjer'}</button>
-                <button class="action-btn ${inRadar?'in-list':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ På radaren':'+ På radaren'}</button>
+            <div class="info-grid">
+                <div class="info-box" onclick="showTip('rsi')">
+                    <div class="label">RSI (14)</div>
+                    <div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div>
+                </div>
+                <div class="info-box" onclick="showTip('volum')">
+                    <div class="label">Volumøkning</div>
+                    <div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div>
+                </div>
+                <div class="info-box" onclick="showTip('rr')">
+                    <div class="label">Risk/Reward</div>
+                    <div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div>
+                </div>
+                <div class="info-box" onclick="showTip('trend')">
+                    <div class="label">Trend</div>
+                    <div class="val" style="color:${s.MACD_Trend === 'Bull' ? '#32d74b' : '#ff453a'}">${s.MACD_Trend}</div>
+                </div>
             </div>
 
-            <div class="tech-list" style="margin-top:20px;">
-                <div class="tech-row"><span>RSI (14)</span><b>${s.RSI_14.toFixed(1)}</b></div>
-                <div class="tech-row"><span>Trend</span><b>${s.MACD_Trend}</b></div>
-                <div class="tech-row"><span>Risk/Reward</span><b>${s.Risk_Reward.toFixed(2)}</b></div>
-                <div class="tech-row"><span>SMA 200</span><b>${s.SMA_200.toFixed(2)}</b></div>
+            <div class="tech-list">
+                <div class="tech-row"><span>SMA 50 / 200</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
+                <div class="tech-row"><span>EMA 9 / 20 / 200</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
+                <div class="tech-row"><span>Bollinger O/N</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
+                <div class="tech-row"><span>Støtte / Motstand</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
+            </div>
+
+            <div class="list-actions">
+                <button class="action-btn ${inMine?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine aksjer':'+ Mine aksjer'}</button>
+                <button class="action-btn ${inRadar?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ På radaren':'+ På radaren'}</button>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
@@ -191,14 +241,14 @@
         currentChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: history.map(h => h.dato), // Her vises datoen
+                labels: history.map(h => h.dato),
                 datasets: [{
                     data: history.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
                     borderWidth: 2,
                     pointRadius: 0,
                     fill: true,
-                    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                    backgroundColor: 'rgba(10, 132, 255, 0.05)',
                     tension: 0.3
                 }]
             },
@@ -206,10 +256,7 @@
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { 
-                        ticks: { color: '#8e8e93', maxRotation: 0, autoSkip: true, maxTicksLimit: 5, font: { size: 10 } },
-                        grid: { display: false }
-                    },
+                    x: { ticks: { color: '#8e8e93', maxRotation: 0, autoSkip: true, maxTicksLimit: 5, font: { size: 10 } }, grid: { display: false } },
                     y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
                 }
             }
@@ -218,8 +265,6 @@
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
-        
-        // Sorteringstekst
         document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
         const activeBtn = document.getElementById('btn-' + currentSort);
         activeBtn.classList.add('active-sort');
@@ -244,7 +289,7 @@
         document.getElementById('list').innerHTML = filtered.map(s => `
             <div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
-                    <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''}</span>
+                    <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${radarStocks.includes(s.Aksje)?'<span class="list-badge" style="color:var(--blue)">RADAR</span>':''}</span>
                     <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
                 <div class="row-indicators">
