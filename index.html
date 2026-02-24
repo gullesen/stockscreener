@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v5.0</title>
+    <title>StockScreener Pro v5.1</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,11 +25,14 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* HEADER */
+        /* HEADER - TO LINJER FOR TID */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
-        .header-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-        h1 { font-size: 28px; font-weight: 800; margin: 0; }
-        .update-time { font-size: 10px; color: var(--secondary); font-weight: 600; text-transform: uppercase; }
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        h1 { font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        
+        .timestamp-container { text-align: right; line-height: 1.2; }
+        .update-label { font-size: 8px; color: var(--blue); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: block; }
+        .update-time { font-size: 10px; color: var(--secondary); font-weight: 600; white-space: nowrap; }
 
         /* INPUTS & KNAPPER */
         input, .sort-btn, .filter-btn, textarea { 
@@ -103,7 +106,11 @@
 <div class="sticky-header">
     <div class="header-top">
         <h1>StockScreener</h1>
-        <div id="lastUpdate" class="update-time">Laster...</div>
+        <div class="timestamp-container">
+            <span class="update-label">Sist hentet</span>
+            <div id="ts-date" class="update-time">--.--.--</div>
+            <div id="ts-time" class="update-time">--:--</div>
+        </div>
     </div>
     <div class="filter-row">
         <button id="f-all" class="filter-btn active-filter" onclick="setFilter('all')">Alle</button>
@@ -124,7 +131,10 @@
 <div id="detailPage">
     <div class="detail-nav">
         <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
-        <div id="lastUpdateDetail" class="update-time"></div>
+        <div class="timestamp-container">
+            <div id="ts-date-detail" class="update-time">--.--.--</div>
+            <div id="ts-time-detail" class="update-time">--:--</div>
+        </div>
     </div>
     <div id="detailContent"></div>
 </div>
@@ -141,7 +151,6 @@
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
     let currentChart = null;
-    let lastFetched = "";
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
@@ -161,13 +170,16 @@
             const res = await fetch(DATA_URL);
             stocks = await res.json();
             
-            // Henter dato fra siste historikk-punkt hvis ikke spesifisert i JSON-roten
-            if (stocks.length > 0 && stocks[0].Historikk) {
-                const sisteDato = stocks[0].Historikk[stocks[0].Historikk.length - 1].dato;
-                lastFetched = "Oppdatert: " + sisteDato;
-                document.getElementById('lastUpdate').innerText = lastFetched;
-                document.getElementById('lastUpdateDetail').innerText = lastFetched;
-            }
+            // Opprett tidsstempel
+            const nå = new Date();
+            const datoStr = nå.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: '2-digit' });
+            const tidStr = nå.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+            
+            // Oppdater DOM
+            document.getElementById('ts-date').innerText = datoStr;
+            document.getElementById('ts-time').innerText = tidStr;
+            document.getElementById('ts-date-detail').innerText = datoStr;
+            document.getElementById('ts-time-detail').innerText = tidStr;
             
             render();
         } catch (e) {
