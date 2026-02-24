@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v4.9</title>
+    <title>StockScreener Pro v5.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,9 +25,13 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* HOVEDSIDE */
+        /* HEADER */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
-        h1 { font-size: 32px; font-weight: 800; margin: 5px 0 10px 0; }
+        .header-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+        h1 { font-size: 28px; font-weight: 800; margin: 0; }
+        .update-time { font-size: 10px; color: var(--secondary); font-weight: 600; text-transform: uppercase; }
+
+        /* INPUTS & KNAPPER */
         input, .sort-btn, .filter-btn, textarea { 
             width: 100%; padding: 12px; border-radius: 12px; 
             border: none; background: var(--card); color: var(--text); 
@@ -39,6 +43,7 @@
         .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
+        /* KORT */
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .ticker { font-size: 20px; font-weight: 800; }
@@ -59,7 +64,9 @@
             background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
             padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
         }
-        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; }
+        .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
+        
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
@@ -94,7 +101,10 @@
 <body>
 
 <div class="sticky-header">
-    <h1>Screener</h1>
+    <div class="header-top">
+        <h1>StockScreener</h1>
+        <div id="lastUpdate" class="update-time">Laster...</div>
+    </div>
     <div class="filter-row">
         <button id="f-all" class="filter-btn active-filter" onclick="setFilter('all')">Alle</button>
         <button id="f-mine" class="filter-btn" onclick="setFilter('mine')">Mine</button>
@@ -112,7 +122,10 @@
 <div id="list">Laster data...</div>
 
 <div id="detailPage">
-    <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
+    <div class="detail-nav">
+        <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
+        <div id="lastUpdateDetail" class="update-time"></div>
+    </div>
     <div id="detailContent"></div>
 </div>
 
@@ -128,6 +141,7 @@
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
     let currentChart = null;
+    let lastFetched = "";
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
@@ -143,9 +157,22 @@
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
 
     async function load() {
-        const res = await fetch(DATA_URL);
-        stocks = await res.json();
-        render();
+        try {
+            const res = await fetch(DATA_URL);
+            stocks = await res.json();
+            
+            // Henter dato fra siste historikk-punkt hvis ikke spesifisert i JSON-roten
+            if (stocks.length > 0 && stocks[0].Historikk) {
+                const sisteDato = stocks[0].Historikk[stocks[0].Historikk.length - 1].dato;
+                lastFetched = "Oppdatert: " + sisteDato;
+                document.getElementById('lastUpdate').innerText = lastFetched;
+                document.getElementById('lastUpdateDetail').innerText = lastFetched;
+            }
+            
+            render();
+        } catch (e) {
+            document.getElementById('list').innerHTML = "Feil ved henting av data.";
+        }
     }
 
     function showTip(e, key) {
@@ -255,7 +282,7 @@
                 <input type="number" class="gav-input" value="${gav}" placeholder="0.00" onchange="saveData('${ticker}', 'gav', this.value)">
                 
                 <div class="label">Notater & Tradingstrategi</div>
-                <textarea placeholder="F.eks. 'Kjøp ved breakout over motstand' eller 'Langsiktig utbyttecase'..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
+                <textarea placeholder="F.eks. 'Kjøp ved breakout'..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
