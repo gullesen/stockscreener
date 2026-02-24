@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v4.6</title>
+    <title>StockScreener Pro v4.7</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,7 +25,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* HOVEDSIDE ELEMENTER */
+        /* HOVEDSIDE */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
         h1 { font-size: 32px; font-weight: 800; margin: 5px 0 10px 0; }
         input, .sort-btn, .filter-btn { 
@@ -33,8 +33,8 @@
             border: none; background: var(--card); color: var(--text); 
             font-size: 14px; margin-bottom: 8px; box-sizing: border-box; outline: none;
         }
-        .filter-row { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .filter-btn { flex: 1; min-width: 100px; white-space: nowrap; font-weight: 600; }
+        .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .filter-btn { flex: 1; font-weight: 600; }
         .active-filter { background: var(--blue) !important; }
         .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
@@ -43,14 +43,15 @@
         .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .ticker { font-size: 20px; font-weight: 800; }
         .price { font-size: 20px; font-weight: 700; }
-        .list-badge { font-size: 10px; background: #3a3a3c; padding: 2px 6px; border-radius: 4px; color: var(--orange); margin-left: 5px; font-weight: 900; }
+        .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); margin-left: 5px; font-weight: 900; }
 
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
-        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 3px; }
         .val { font-size: 14px; font-weight: 700; }
+        .info-i { color: var(--blue); font-style: normal; font-size: 11px; }
 
-        /* DETALJSIDE (AKSJESIDEN) */
+        /* AKSJESIDEN */
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
@@ -66,19 +67,22 @@
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
         
-        .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 30px; }
+        .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
         .tech-row:last-child { border-bottom: none; }
 
-        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; padding-bottom: 40px; }
+        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 40px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .action-btn.active-mine { background: rgba(255, 159, 10, 0.2); border-color: var(--orange); color: var(--orange); }
-        .action-btn.active-radar { background: rgba(10, 132, 255, 0.2); border-color: var(--blue); color: var(--blue); }
+        .action-btn.active-mine { background: rgba(255, 159, 10, 0.15); border-color: var(--orange); color: var(--orange); }
+        .action-btn.active-radar { background: rgba(10, 132, 255, 0.15); border-color: var(--blue); color: var(--blue); }
 
+        /* TOOLTIP TOAST */
         #tooltipToast {
-            position: fixed; bottom: -100px; left: 20px; right: 20px;
-            background: #2c2c2e; color: white; padding: 16px; border-radius: 12px;
-            z-index: 3000; transition: bottom 0.3s ease; border-left: 5px solid var(--blue);
+            position: fixed; bottom: -120px; left: 20px; right: 20px;
+            background: #2c2c2e; color: white; padding: 16px; border-radius: 14px;
+            z-index: 3000; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-left: 5px solid var(--blue); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            font-size: 14px; line-height: 1.4;
         }
         #tooltipToast.active { bottom: 40px; }
     </style>
@@ -89,8 +93,8 @@
     <h1>Screener</h1>
     <div class="filter-row">
         <button id="f-all" class="filter-btn active-filter" onclick="setFilter('all')">Alle</button>
-        <button id="f-mine" class="filter-btn" onclick="setFilter('mine')">Mine aksjer</button>
-        <button id="f-radar" class="filter-btn" onclick="setFilter('radar')">På radaren</button>
+        <button id="f-mine" class="filter-btn" onclick="setFilter('mine')">Mine</button>
+        <button id="f-radar" class="filter-btn" onclick="setFilter('radar')">Radar</button>
     </div>
     <input type="text" id="search" placeholder="Søk ticker..." onkeyup="render()">
     <div class="sort-row">
@@ -120,10 +124,14 @@
     let currentChart = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
-        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers snitt. Høyt volum bekrefter styrke.",
-        rr: "<b>Risk/Reward:</b> Oppside til motstand delt på nedside til støtte. Bør være over 2.0.",
-        trend: "<b>Trend:</b> Indikerer om momentumet er BULL (opp) eller BEAR (ned)."
+        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (billig), over 70 er overkjøpt (dyrt).",
+        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers gjennomsnitt. Høyt volum bekrefter styrke.",
+        rr: "<b>Risk/Reward:</b> Potensiell oppside delt på nedside. Bør ideelt sett være over 2.0.",
+        trend: "<b>Trend:</b> Basert på MACD. Indikerer om momentumet er BULL (opp) eller BEAR (ned).",
+        sma: "<b>SMA:</b> Glidende snitt. SMA 200 er ofte det viktigste langsiktige støttenivået.",
+        ema: "<b>EMA:</b> Eksponentielle snitt som reagerer raskere på de siste kursendringene.",
+        boll: "<b>Bollinger:</b> Viser volatilitet. Prisen holder seg normalt innenfor disse båndene.",
+        support: "<b>Støtte/Motstand:</b> Historiske nivåer hvor kursen har en tendens til å snu."
     };
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
@@ -134,11 +142,12 @@
         render();
     }
 
-    function showTip(key) {
+    function showTip(e, key) {
+        if(e) e.stopPropagation();
         const toast = document.getElementById('tooltipToast');
         toast.innerHTML = tooltips[key];
         toast.classList.add('active');
-        setTimeout(hideTip, 4000);
+        setTimeout(hideTip, 5000);
     }
     function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
 
@@ -196,29 +205,17 @@
             <div class="chart-container"><canvas id="mainChart"></canvas></div>
 
             <div class="info-grid">
-                <div class="info-box" onclick="showTip('rsi')">
-                    <div class="label">RSI (14)</div>
-                    <div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div>
-                </div>
-                <div class="info-box" onclick="showTip('volum')">
-                    <div class="label">Volumøkning</div>
-                    <div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div>
-                </div>
-                <div class="info-box" onclick="showTip('rr')">
-                    <div class="label">Risk/Reward</div>
-                    <div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div>
-                </div>
-                <div class="info-box" onclick="showTip('trend')">
-                    <div class="label">Trend</div>
-                    <div class="val" style="color:${s.MACD_Trend === 'Bull' ? '#32d74b' : '#ff453a'}">${s.MACD_Trend}</div>
-                </div>
+                <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI (14) <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Volumøkning <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
+                <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">Risk/Reward <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend === 'Bull' ? '#32d74b' : '#ff453a'}">${s.MACD_Trend}</div></div>
             </div>
 
             <div class="tech-list">
-                <div class="tech-row"><span>SMA 50 / 200</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
-                <div class="tech-row"><span>EMA 9 / 20 / 200</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
-                <div class="tech-row"><span>Bollinger O/N</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
-                <div class="tech-row"><span>Støtte / Motstand</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'boll')"><span>Bollinger O/N ⓘ</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / Motstand ⓘ</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
             </div>
 
             <div class="list-actions">
@@ -245,7 +242,7 @@
                 datasets: [{
                     data: history.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
-                    borderWidth: 2,
+                    borderWidth: 2.5,
                     pointRadius: 0,
                     fill: true,
                     backgroundColor: 'rgba(10, 132, 255, 0.05)',
@@ -293,16 +290,16 @@
                     <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
                 <div class="row-indicators">
-                    <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
-                    <div class="mini-stat"><span class="label">Vol %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                    <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
-                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
+                    <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
+                    <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val">${s.MACD_Trend}</span></div>
+                    <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
                 </div>
             </div>
         `).join('');
     }
 
-    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
+    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; document.body.style.overflow = 'auto'; }
     load();
 </script>
 </body>
