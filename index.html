@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener</title>
+    <title>StockScreener Pro</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,44 +16,56 @@
             --green: #32d74b;
             --red: #ff453a;
             --orange: #ff9f0a;
+            --blue: #0a84ff;
         }
         body { 
             font-family: -apple-system, system-ui; 
             background: var(--bg); color: var(--text); 
             margin: 0; padding: env(safe-area-inset-top) 15px 100px 15px;
+            -webkit-tap-highlight-color: transparent;
         }
+        
+        /* HEADER & SØK */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
-        h1 { font-size: 34px; margin: 10px 0; }
-        input, select { 
-            width: 100%; padding: 14px; border-radius: 12px; 
+        h1 { font-size: 32px; font-weight: 800; margin: 5px 0 15px 0; }
+        input, .sort-btn { 
+            width: 100%; padding: 12px; border-radius: 12px; 
             border: none; background: var(--card); color: var(--text); 
-            font-size: 17px; margin-bottom: 10px; box-sizing: border-box;
+            font-size: 16px; margin-bottom: 8px; box-sizing: border-box; outline: none;
         }
-        .stock-card { 
-            background: var(--card); border-radius: 18px; 
-            padding: 18px; margin-bottom: 12px; 
-        }
-        .row-top { display: flex; justify-content: space-between; margin-bottom: 12px; }
-        .ticker { font-size: 22px; font-weight: 800; }
-        .price { font-size: 22px; font-weight: 700; }
-        .row-stats { display: flex; justify-content: space-between; border-top: 1px solid #38383a; padding-top: 12px; }
-        .stat { display: flex; flex-direction: column; }
-        .label { font-size: 11px; color: var(--secondary); font-weight: 700; text-transform: uppercase; }
-        .value { font-size: 16px; font-weight: 600; }
+        .sort-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
-        /* DETALJSIDE (MODAL) */
+        /* LISTE */
+        .stock-card { 
+            background: var(--card); border-radius: 16px; 
+            padding: 16px; margin-bottom: 10px; cursor: pointer;
+        }
+        .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .ticker { font-size: 19px; font-weight: 800; }
+        .price { font-size: 19px; font-weight: 700; }
+        
+        .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
+        .mini-stat { display: flex; flex-direction: column; align-items: flex-start; }
+        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+        .val { font-size: 13px; font-weight: 700; }
+
+        /* DETALJSIDE */
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 2000;
-            display: none; overflow-y: auto;
-            padding: env(safe-area-inset-top) 20px 50px 20px;
-            box-sizing: border-box;
+            background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
+            padding: env(safe-area-inset-top) 20px 50px 20px; box-sizing: border-box;
         }
-        .back-btn { color: var(--green); font-size: 18px; cursor: pointer; margin-bottom: 20px; display: inline-block; }
-        .detail-header { text-align: center; margin-bottom: 30px; }
-        .detail-ticker { font-size: 40px; font-weight: 900; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
+        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; }
+        .detail-header { text-align: center; margin-bottom: 20px; }
+        .detail-ticker { font-size: 36px; font-weight: 900; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .info-box { background: var(--card); padding: 12px; border-radius: 14px; }
+        
+        .tech-list { background: var(--card); border-radius: 14px; padding: 5px 15px; margin-top: 20px; }
+        .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
+        .tech-row:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
@@ -61,28 +73,41 @@
 <div class="sticky-header">
     <h1>Screener</h1>
     <input type="text" id="search" placeholder="Søk ticker..." onkeyup="render()">
-    <select id="sort" onchange="render()">
-        <option value="ticker">Sorter etter: Navn</option>
-        <option value="rsi">RSI (Oversolgt)</option>
-        <option value="volum">Volumøkning</option>
-        <option value="rr">Risk/Reward</option>
-    </select>
+    <div class="sort-row">
+        <div id="btn-rsi" class="sort-btn" style="text-align:center" onclick="setSort('rsi')">RSI</div>
+        <div id="btn-volum" class="sort-btn" style="text-align:center" onclick="setSort('volum')">Volum</div>
+        <div id="btn-rr" class="sort-btn" style="text-align:center" onclick="setSort('rr')">R/R</div>
+        <div id="btn-ticker" class="sort-btn" style="text-align:center" onclick="setSort('ticker')">Navn</div>
+    </div>
 </div>
 
 <div id="list">Laster data...</div>
 
 <div id="detailPage">
-    <div class="back-btn" onclick="closeDetail()">✕ Lukk</div>
+    <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
     <div id="detailContent"></div>
 </div>
 
 <script>
     let stocks = [];
+    let currentSort = 'ticker';
+    let isAscending = true;
+
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
 
-    async function loadData() {
+    async function load() {
         const res = await fetch(DATA_URL);
         stocks = await res.json();
+        render();
+    }
+
+    function setSort(field) {
+        if (currentSort === field) {
+            isAscending = !isAscending;
+        } else {
+            currentSort = field;
+            isAscending = (field === 'ticker' || field === 'rsi');
+        }
         render();
     }
 
@@ -94,46 +119,46 @@
         detail.innerHTML = `
             <div class="detail-header">
                 <div class="detail-ticker">${s.Aksje}</div>
-                <div style="font-size: 24px; font-weight: bold;">${s["Siste kurs"].toFixed(2)}</div>
+                <div style="font-size: 26px; font-weight: 800;">${s["Siste kurs"].toFixed(2)}</div>
+                <div style="color:${s.MACD_Trend==='Bull'?'#32d74b':'#ff453a'}; font-weight:900; font-size:12px; margin-top:5px;">${s.MACD_Trend.toUpperCase()} TREND</div>
             </div>
             
-            <div style="background: var(--card); border-radius: 15px; padding: 10px; margin-bottom: 20px;">
+            <div style="background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px;">
                 <canvas id="mainChart"></canvas>
             </div>
 
             <div class="info-grid">
-                <div class="info-box"><div class="label">RSI (14)</div><div class="value">${s.RSI_14.toFixed(1)}</div></div>
-                <div class="info-box"><div class="label">Volumøkning</div><div class="value">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
-                <div class="info-box"><div class="label">Risk/Reward</div><div class="value">${s.Risk_Reward.toFixed(1)}</div></div>
-                <div class="info-box"><div class="label">MACD</div><div class="value">${s.MACD}</div></div>
+                <div class="info-box"><div class="label">RSI (14)</div><div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div></div>
+                <div class="info-box"><div class="label">Volumøkning</div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
+                <div class="info-box"><div class="label">Risk/Reward</div><div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div></div>
+                <div class="info-box"><div class="label">MACD</div><div class="val">${s.MACD.toFixed(2)}</div></div>
             </div>
 
-            <div style="margin-top: 30px; background: var(--card); padding: 15px; border-radius: 15px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>SMA 200</span><b>${s.SMA_200.toFixed(2)}</b></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom: 10px;"><span>EMA 20</span><b>${s.EMA_20.toFixed(2)}</b></div>
-                <div style="display:flex; justify-content:space-between;"><span>Støtte (50)</span><b>${s.Stotte_50.toFixed(2)}</b></div>
+            <div class="tech-list">
+                <div class="tech-row"><span>SMA 50 / 200</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
+                <div class="tech-row"><span>EMA 9 / 20</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)}</b></div>
+                <div class="tech-row"><span>Bollinger O/N</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
+                <div class="tech-row"><span>Støtte / Motstand</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
             </div>
         `;
         
         page.style.display = 'block';
-        document.body.style.overflow = 'hidden'; // Hindrer scrolling i bakgrunnen
+        document.body.style.overflow = 'hidden';
         
-        // Tegn en enkel graf
         const ctx = document.getElementById('mainChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: s.Historikk.map(h => h.dato),
+                labels: s.Historikk.map(h => ""),
                 datasets: [{
-                    label: 'Pris',
                     data: s.Historikk.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     pointRadius: 0,
-                    fill: false
+                    tension: 0.1
                 }]
             },
-            options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#333' } } } }
+            options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#2c2c2e' } } } }
         });
     }
 
@@ -144,31 +169,44 @@
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
-        const sortBy = document.getElementById('sort').value;
+        
+        // Oppdater knappene visuelt
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
+        const activeBtn = document.getElementById('btn-' + currentSort);
+        activeBtn.classList.add('active-sort');
+        activeBtn.innerHTML = currentSort.toUpperCase() + (isAscending ? " ↑" : " ↓");
+
         let filtered = stocks.filter(s => s.Aksje.toUpperCase().includes(query));
 
         filtered.sort((a, b) => {
-            if(sortBy === 'rsi') return a.RSI_14 - b.RSI_14;
-            if(sortBy === 'volum') return b.Volum_vs_Snitt - a.Volum_vs_Snitt;
-            if(sortBy === 'rr') return b.Risk_Reward - a.Risk_Reward;
-            return a.Aksje.localeCompare(b.Aksje);
+            let valA, valB;
+            if(currentSort === 'rsi') { valA = a.RSI_14; valB = b.RSI_14; }
+            else if(currentSort === 'volum') { valA = a.Volum_vs_Snitt; valB = b.Volum_vs_Snitt; }
+            else if(currentSort === 'rr') { valA = a.Risk_Reward; valB = b.Risk_Reward; }
+            else { valA = a.Aksje; valB = b.Aksje; }
+
+            if (valA < valB) return isAscending ? -1 : 1;
+            if (valA > valB) return isAscending ? 1 : -1;
+            return 0;
         });
 
         document.getElementById('list').innerHTML = filtered.map(s => `
             <div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
-                    <div><div class="ticker">${s.Aksje}</div><div style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}; font-size:10px; font-weight:900;">${s.MACD_Trend}</div></div>
-                    <div class="price">${s["Siste kurs"].toFixed(2)}</div>
+                    <span class="ticker">${s.Aksje}</span>
+                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
-                <div class="row-stats">
-                    <div class="stat"><div class="label">RSI</div><div class="value">${s.RSI_14.toFixed(1)}</div></div>
-                    <div class="stat"><div class="label">Volum %</div><div class="value">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
-                    <div class="stat"><div class="label">R/R</div><div class="value">${s.Risk_Reward.toFixed(1)}</div></div>
+                <div class="row-indicators">
+                    <div class="mini-stat"><span class="label">Trend</span><span class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend.toUpperCase()}</span></div>
+                    <div class="mini-stat"><span class="label">RSI</span><span class="val" style="color:${s.RSI_14 < 35 ? 'var(--green)' : (s.RSI_14 > 65 ? 'var(--red)' : 'white')}">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat"><span class="label">Vol %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
+                    <div class="mini-stat"><span class="label">R/R</span><span class="val" style="color:${s.Risk_Reward > 2 ? 'var(--green)' : 'white'}">${s.Risk_Reward.toFixed(1)}</span></div>
                 </div>
             </div>
         `).join('');
     }
-    loadData();
+
+    load();
 </script>
 </body>
 </html>
