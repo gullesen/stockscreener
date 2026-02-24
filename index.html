@@ -3,14 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v4.1</title>
-    
+    <title>StockScreener Pro v4.5</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4222/4222031.png">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
         :root {
             --bg: #000000;
@@ -22,67 +18,56 @@
             --blue: #0a84ff;
             --orange: #ff9f0a;
         }
-
         body { 
             font-family: -apple-system, system-ui, sans-serif; 
             background: var(--bg); color: var(--text); 
-            margin: 0; padding: env(safe-area-inset-top) 15px 100px 15px;
+            margin: 0; padding: env(safe-area-inset-top) 15px 120px 15px;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
         }
-
-        /* HEADER & SØK */
-        .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0 5px 0; z-index: 100; }
-        h1 { font-size: 32px; font-weight: 800; margin: 5px 0 15px 0; }
-        input, .sort-btn { 
+        .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
+        h1 { font-size: 32px; font-weight: 800; margin: 5px 0 10px 0; }
+        input, .sort-btn, .filter-btn { 
             width: 100%; padding: 12px; border-radius: 12px; 
             border: none; background: var(--card); color: var(--text); 
-            font-size: 16px; margin-bottom: 8px; box-sizing: border-box; outline: none;
+            font-size: 14px; margin-bottom: 8px; box-sizing: border-box; outline: none;
         }
-        .sort-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .filter-row { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 5px; }
+        .filter-btn { flex: 1; min-width: 100px; white-space: nowrap; font-weight: 600; }
+        .active-filter { background: var(--blue) !important; }
+        .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
-        /* LISTE OVER AKSJER */
-        .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
-        .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; }
+        .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .ticker { font-size: 20px; font-weight: 800; }
         .price { font-size: 20px; font-weight: 700; }
-        
-        .row-indicators { display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid #2c2c2e; }
-        .mini-stat { display: flex; flex-direction: column; align-items: flex-start; }
-        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 3px; }
-        .val { font-size: 14px; font-weight: 700; }
-        .info-i { color: var(--blue); font-style: normal; font-size: 11px; }
+        .list-badge { font-size: 10px; background: #3a3a3c; padding: 2px 6px; border-radius: 4px; color: var(--orange); margin-left: 5px; }
 
-        /* DETALJSIDE (MODAL) */
+        .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
+        .mini-stat { display: flex; flex-direction: column; }
+        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+        .val { font-size: 14px; font-weight: 700; }
+
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
-            padding: env(safe-area-inset-top) 20px 80px 20px; box-sizing: border-box;
+            padding: env(safe-area-inset-top) 20px 100px 20px; box-sizing: border-box;
         }
-        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; cursor: pointer; }
-        
-        /* TIDSVELGER */
+        .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; margin-bottom: 20px; display: block; }
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
-        .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
-
-        .chart-container { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; height: 250px; position: relative; }
-
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .info-box { background: var(--card); padding: 12px; border-radius: 14px; }
+        .chart-container { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; height: 260px; }
         
-        .tech-list { background: var(--card); border-radius: 14px; padding: 5px 15px; }
-        .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; align-items: center; }
-        .tech-row:last-child { border-bottom: none; }
+        /* LISTE-KNAPPER */
+        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .action-btn { padding: 12px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
+        .action-btn.in-list { background: var(--orange); border-color: var(--orange); color: black; }
 
-        /* TOOLTIP TOAST */
         #tooltipToast {
             position: fixed; bottom: -100px; left: 20px; right: 20px;
-            background: #2c2c2e; color: white; padding: 16px;
-            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            z-index: 3000; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            font-size: 14px; line-height: 1.4; border-left: 5px solid var(--blue);
+            background: #2c2c2e; color: white; padding: 16px; border-radius: 12px;
+            z-index: 3000; transition: bottom 0.3s ease; border-left: 5px solid var(--blue);
         }
         #tooltipToast.active { bottom: 40px; }
     </style>
@@ -91,16 +76,21 @@
 
 <div class="sticky-header">
     <h1>Screener</h1>
+    <div class="filter-row">
+        <button id="f-all" class="filter-btn active-filter" onclick="setFilter('all')">Alle</button>
+        <button id="f-mine" class="filter-btn" onclick="setFilter('mine')">Mine aksjer</button>
+        <button id="f-radar" class="filter-btn" onclick="setFilter('radar')">På radaren</button>
+    </div>
     <input type="text" id="search" placeholder="Søk ticker..." onkeyup="render()">
     <div class="sort-row">
-        <div id="btn-rsi" class="sort-btn" style="text-align:center" onclick="setSort('rsi')">RSI</div>
-        <div id="btn-volum" class="sort-btn" style="text-align:center" onclick="setSort('volum')">Volum</div>
-        <div id="btn-rr" class="sort-btn" style="text-align:center" onclick="setSort('rr')">R/R</div>
-        <div id="btn-ticker" class="sort-btn" style="text-align:center" onclick="setSort('ticker')">Navn</div>
+        <div id="btn-rsi" class="sort-btn" onclick="setSort('rsi')">RSI</div>
+        <div id="btn-volum" class="sort-btn" onclick="setSort('volum')">Vol</div>
+        <div id="btn-rr" class="sort-btn" onclick="setSort('rr')">R/R</div>
+        <div id="btn-ticker" class="sort-btn" onclick="setSort('ticker')">Navn</div>
     </div>
 </div>
 
-<div id="list">Laster markedsdata...</div>
+<div id="list">Laster...</div>
 
 <div id="detailPage">
     <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
@@ -113,43 +103,41 @@
     let stocks = [];
     let currentSort = 'ticker';
     let isAscending = true;
+    let currentFilter = 'all';
+    let myStocks = JSON.parse(localStorage.getItem('myStocks')) || [];
+    let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
     let currentChart = null;
-
-    const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (kjøpsmulighet), over 70 er overkjøpt (dyrt).",
-        volum: "<b>Volumøkning:</b> Dagens handelsvolum vs 20-dagers snitt. Høyt volum bekrefter retningen.",
-        rr: "<b>Risk/Reward:</b> Potensiell oppside delt på risiko. Bør være over 2.0 for gode setups.",
-        trend: "<b>MACD Trend:</b> Viser om det kortsiktige momentumet er BULL (opp) eller BEAR (ned).",
-        sma: "<b>SMA 50/200:</b> Glidende snitt for trend. SMA 200 fungerer ofte som hovedstøtte.",
-        ema: "<b>EMA 9/20/200:</b> Eksponentielle snitt som gir mer vekt til de siste dagers kurser.",
-        boll: "<b>Bollinger:</b> Viser volatilitet. Prisen holder seg normalt innenfor disse båndene.",
-        support: "<b>Støtte/Motstand:</b> Historiske prisnivåer hvor kursen ofte snur."
-    };
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/6d1b487cc60ea300ff04f67a8dc74037ab3ea22e/aksjer.json";
 
     async function load() {
-        try {
-            const res = await fetch(DATA_URL);
-            stocks = await res.json();
-            render();
-        } catch (e) {
-            document.getElementById('list').innerHTML = "Feil ved henting av data.";
-        }
+        const res = await fetch(DATA_URL);
+        stocks = await res.json();
+        render();
     }
 
-    function showTip(e, key) {
-        if(e) e.stopPropagation();
-        const toast = document.getElementById('tooltipToast');
-        toast.innerHTML = tooltips[key];
-        toast.classList.add('active');
-        setTimeout(hideTip, 5000);
+    function toggleList(ticker, listType) {
+        let list = listType === 'mine' ? myStocks : radarStocks;
+        const idx = list.indexOf(ticker);
+        if (idx > -1) list.splice(idx, 1);
+        else list.push(ticker);
+        
+        if (listType === 'mine') { myStocks = list; localStorage.setItem('myStocks', JSON.stringify(myStocks)); }
+        else { radarStocks = list; localStorage.setItem('radarStocks', JSON.stringify(radarStocks)); }
+        
+        openDetail(ticker); // Refresh view
+        render();
     }
 
-    function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
+    function setFilter(f) {
+        currentFilter = f;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active-filter'));
+        document.getElementById('f-' + f).classList.add('active-filter');
+        render();
+    }
 
     function setSort(field) {
-        if (currentSort === field) { isAscending = !isAscending; } 
+        if (currentSort === field) isAscending = !isAscending;
         else { currentSort = field; isAscending = (field === 'ticker' || field === 'rsi'); }
         render();
     }
@@ -157,118 +145,92 @@
     function openDetail(ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
         const detail = document.getElementById('detailContent');
-        const page = document.getElementById('detailPage');
-        
+        const inMine = myStocks.includes(ticker);
+        const inRadar = radarStocks.includes(ticker);
+
         detail.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
-                <div style="font-size:36px; font-weight:900; letter-spacing:-1px;">${s.Aksje}</div>
-                <div style="font-size:28px; font-weight:800;">${s["Siste kurs"].toFixed(2)}</div>
-                <div onclick="showTip(event, 'trend')" style="color:${s.MACD_Trend==='Bull'?'#32d74b':'#ff453a'}; font-weight:900; font-size:12px; margin-top:5px; text-transform:uppercase;">
-                    ${s.MACD_Trend} Trend ⓘ
-                </div>
+                <div style="font-size:36px; font-weight:900;">${s.Aksje}</div>
+                <div style="font-size:26px; font-weight:800;">${s["Siste kurs"].toFixed(2)}</div>
             </div>
 
             <div class="time-row">
-                <div class="time-btn" id="t-5" onclick="updateChart(5, '${s.Aksje}')">1U</div>
-                <div class="time-btn active" id="t-21" onclick="updateChart(21, '${s.Aksje}')">1M</div>
-                <div class="time-btn" id="t-63" onclick="updateChart(63, '${s.Aksje}')">3M</div>
-                <div class="time-btn" id="t-126" onclick="updateChart(126, '${s.Aksje}')">6M</div>
-                <div class="time-btn" id="t-250" onclick="updateChart(250, '${s.Aksje}')">1Å</div>
-            </div>
-            
-            <div class="chart-container">
-                <canvas id="mainChart"></canvas>
+                <div class="time-btn" id="t-7" onclick="updateChart(7, '${ticker}')">1U</div>
+                <div class="time-btn active" id="t-30" onclick="updateChart(30, '${ticker}')">1M</div>
+                <div class="time-btn" id="t-90" onclick="updateChart(90, '${ticker}')">3M</div>
+                <div class="time-btn" id="t-180" onclick="updateChart(180, '${ticker}')">6M</div>
+                <div class="time-btn" id="t-365" onclick="updateChart(365, '${ticker}')">1Å</div>
             </div>
 
-            <div class="info-grid">
-                <div class="info-box" onclick="showTip(event, 'rsi')">
-                    <div class="label">RSI (14) ⓘ</div>
-                    <div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div>
-                </div>
-                <div class="info-box" onclick="showTip(event, 'volum')">
-                    <div class="label">Volumøkning ⓘ</div>
-                    <div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div>
-                </div>
-                <div class="info-box" onclick="showTip(event, 'rr')">
-                    <div class="label">Risk/Reward ⓘ</div>
-                    <div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div>
-                </div>
-                <div class="info-box">
-                    <div class="label">MACD</div>
-                    <div class="val">${s.MACD.toFixed(2)}</div>
-                </div>
+            <div class="chart-container"><canvas id="mainChart"></canvas></div>
+
+            <div class="list-actions">
+                <button class="action-btn ${inMine?'in-list':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine aksjer':'+ Mine aksjer'}</button>
+                <button class="action-btn ${inRadar?'in-list':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ På radaren':'+ På radaren'}</button>
             </div>
 
-            <div class="tech-list">
-                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'boll')"><span>Bollinger O/N ⓘ</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / Motstand ⓘ</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
+            <div class="tech-list" style="margin-top:20px;">
+                <div class="tech-row"><span>RSI (14)</span><b>${s.RSI_14.toFixed(1)}</b></div>
+                <div class="tech-row"><span>Trend</span><b>${s.MACD_Trend}</b></div>
+                <div class="tech-row"><span>Risk/Reward</span><b>${s.Risk_Reward.toFixed(2)}</b></div>
+                <div class="tech-row"><span>SMA 200</span><b>${s.SMA_200.toFixed(2)}</b></div>
             </div>
         `;
-        
-        page.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        updateChart(63, s.Aksje); // Start med 3M som default i grafen
+        document.getElementById('detailPage').style.display = 'block';
+        updateChart(30, ticker);
     }
 
     function updateChart(dager, ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
         const history = s.Historikk.slice(-dager);
-        
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        const activeBtn = document.getElementById('t-' + dager);
-        if(activeBtn) activeBtn.classList.add('active');
+        document.getElementById('t-' + dager).classList.add('active');
 
+        if (currentChart) currentChart.destroy();
         const ctx = document.getElementById('mainChart').getContext('2d');
-        if (currentChart) { currentChart.destroy(); }
-
-        const isPositive = s.RS_dag >= 0;
-        const color = isPositive ? '#32d74b' : '#ff453a';
-
         currentChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: history.map(h => ""),
+                labels: history.map(h => h.dato), // Her vises datoen
                 datasets: [{
                     data: history.map(h => h.pris),
-                    borderColor: color,
-                    borderWidth: 3,
+                    borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0.2,
                     fill: true,
-                    backgroundColor: isPositive ? 'rgba(50, 215, 75, 0.1)' : 'rgba(255, 69, 58, 0.1)'
+                    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                    tension: 0.3
                 }]
             },
-            options: { 
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    x: { display: false }, 
-                    y: { 
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#8e8e93', font: { size: 10 } }
-                    } 
-                } 
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { 
+                        ticks: { color: '#8e8e93', maxRotation: 0, autoSkip: true, maxTicksLimit: 5, font: { size: 10 } },
+                        grid: { display: false }
+                    },
+                    y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                }
             }
         });
-    }
-
-    function closeDetail() {
-        document.getElementById('detailPage').style.display = 'none';
-        document.body.style.overflow = 'auto';
     }
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
         
+        // Sorteringstekst
         document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
         const activeBtn = document.getElementById('btn-' + currentSort);
         activeBtn.classList.add('active-sort');
-        activeBtn.innerHTML = currentSort.toUpperCase() + (isAscending ? " ↑" : " ↓");
+        activeBtn.innerHTML = currentSort.toUpperCase() + (isAscending ? "↑" : "↓");
 
-        let filtered = stocks.filter(s => s.Aksje.toUpperCase().includes(query));
+        let filtered = stocks.filter(s => {
+            const matchesSearch = s.Aksje.toUpperCase().includes(query);
+            if (currentFilter === 'mine') return matchesSearch && myStocks.includes(s.Aksje);
+            if (currentFilter === 'radar') return matchesSearch && radarStocks.includes(s.Aksje);
+            return matchesSearch;
+        });
 
         filtered.sort((a, b) => {
             let vA, vB;
@@ -276,28 +238,26 @@
             else if(currentSort === 'volum') { vA = a.Volum_vs_Snitt; vB = b.Volum_vs_Snitt; }
             else if(currentSort === 'rr') { vA = a.Risk_Reward; vB = b.Risk_Reward; }
             else { vA = a.Aksje; vB = b.Aksje; }
-
-            if (vA < vB) return isAscending ? -1 : 1;
-            if (vA > vB) return isAscending ? 1 : -1;
-            return 0;
+            return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
 
         document.getElementById('list').innerHTML = filtered.map(s => `
             <div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
-                    <span class="ticker">${s.Aksje}</span>
+                    <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''}</span>
                     <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
                 <div class="row-indicators">
-                    <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend.toUpperCase()}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.RSI_14 < 35 ? 'var(--green)' : (s.RSI_14 > 65 ? 'var(--red)' : 'white')}">${s.RSI_14.toFixed(0)}</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                    <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val" style="color:${s.Risk_Reward > 2 ? 'var(--green)' : 'white'}">${s.Risk_Reward.toFixed(1)}</span></div>
+                    <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat"><span class="label">Vol %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
+                    <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
+                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
                 </div>
             </div>
         `).join('');
     }
 
+    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
     load();
 </script>
 </body>
