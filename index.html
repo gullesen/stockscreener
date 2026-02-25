@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v6.1</title>
+    <title>StockScreener Pro v6.5</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4222/4222031.png">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -27,7 +25,6 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* HEADER */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
         .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         h1 { font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
@@ -47,7 +44,6 @@
         .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
-        /* KORT */
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .ticker { font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 5px; }
@@ -58,11 +54,9 @@
 
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
-        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 3px; }
+        .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 700; }
-        .info-i { color: var(--blue); font-style: normal; font-size: 11px; }
 
-        /* DETALJSIDE */
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
@@ -71,35 +65,24 @@
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
         
-        .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
-        .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
-        .time-btn.active { background: #3a3a3c; color: white; }
-        
         .chart-container { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; height: 260px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
         
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
-        .tech-row:last-child { border-bottom: none; }
+
+        .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+        .rel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; text-align: center; }
 
         .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .action-btn.active-mine { background: rgba(255, 159, 10, 0.15); border-color: var(--orange); color: var(--orange); }
-        .action-btn.active-radar { background: rgba(10, 132, 255, 0.15); border-color: var(--blue); color: var(--blue); }
+        .active-mine { background: rgba(255, 159, 10, 0.15); border-color: var(--orange); color: var(--orange); }
+        .active-radar { background: rgba(10, 132, 255, 0.15); border-color: var(--blue); color: var(--blue); }
 
-        .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
-        .user-data-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 15px; }
-        .gav-input { background: #2c2c2e; width: 100%; margin: 8px 0 15px 0; height: 45px; text-align: left; padding: 0 15px; }
-        textarea { background: #2c2c2e; resize: none; height: 100px; padding: 12px; margin-top: 5px; }
-
-        #tooltipToast {
-            position: fixed; bottom: -120px; left: 20px; right: 20px;
-            background: #2c2c2e; color: white; padding: 16px; border-radius: 14px;
-            z-index: 3000; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            border-left: 5px solid var(--blue); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
-        #tooltipToast.active { bottom: 40px; }
+        .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
+        .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
+        .time-btn.active { background: #3a3a3c; color: white; }
     </style>
 </head>
 <body>
@@ -127,20 +110,14 @@
     </div>
 </div>
 
-<div id="list">Laster data fra Gist...</div>
+<div id="list">Laster data...</div>
 
 <div id="detailPage">
     <div class="detail-nav">
         <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
-        <div class="timestamp-container">
-            <div id="ts-date-detail" class="update-time">--.--.--</div>
-            <div id="ts-time-detail" class="update-time">--:--</div>
-        </div>
     </div>
     <div id="detailContent"></div>
 </div>
-
-<div id="tooltipToast" onclick="hideTip()"></div>
 
 <script>
     let stocks = [];
@@ -153,77 +130,20 @@
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
     let currentChart = null;
 
-    const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
-        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers snitt. Høyt volum bekrefter styrke.",
-        rr: "<b>Risk/Reward:</b> Oppside mot nedside. Bør ideelt sett være over 2.0.",
-        trend: "<b>Trend:</b> Basert på MACD. Indikerer BULL (opp) eller BEAR (ned) momentum.",
-        sma: "<b>SMA:</b> Glidende snitt. SMA 200 er et viktig langsiktig nivå.",
-        ema: "<b>EMA:</b> Eksponentielle snitt som reagerer raskere på prisendringer.",
-        boll: "<b>Bollinger:</b> Viser volatilitet og prisbånd.",
-        support: "<b>Støtte/Motstand:</b> Nivåer hvor kursen ofte snur."
-    };
-
-    // Lagt til tidsstempel i URL for å unngå cache-problemer
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
 
     async function load() {
         try {
             const res = await fetch(DATA_URL);
             const data = await res.json();
-            
-            if (data.oppdatert && data.aksjer) {
+            if (data.oppdatert) {
                 stocks = data.aksjer;
-                const timeParts = data.oppdatert.split(" ");
-                document.getElementById('ts-date').innerText = timeParts[0];
-                document.getElementById('ts-time').innerText = timeParts[1];
-                document.getElementById('ts-date-detail').innerText = timeParts[0];
-                document.getElementById('ts-time-detail').innerText = timeParts[1];
-            } else {
-                stocks = data;
-            }
+                const tp = data.oppdatert.split(" ");
+                document.getElementById('ts-date').innerText = tp[0];
+                document.getElementById('ts-time').innerText = tp[1];
+            } else { stocks = data; }
             render();
-        } catch (e) {
-            document.getElementById('list').innerHTML = "Feil ved henting av data. Sjekk Gist ID.";
-        }
-    }
-
-    function showTip(e, key) {
-        if(e) e.stopPropagation();
-        const toast = document.getElementById('tooltipToast');
-        toast.innerHTML = tooltips[key];
-        toast.classList.add('active');
-        setTimeout(hideTip, 5000);
-    }
-    function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
-
-    function toggleList(ticker, listType) {
-        if (listType === 'mine') {
-            const idx = myStocks.indexOf(ticker);
-            if (idx > -1) myStocks.splice(idx, 1);
-            else { myStocks.push(ticker); const rIdx = radarStocks.indexOf(ticker); if(rIdx > -1) radarStocks.splice(rIdx, 1); }
-        } else {
-            const idx = radarStocks.indexOf(ticker);
-            if (idx > -1) radarStocks.splice(idx, 1);
-            else { radarStocks.push(ticker); const mIdx = myStocks.indexOf(ticker); if(mIdx > -1) myStocks.splice(mIdx, 1); }
-        }
-        localStorage.setItem('myStocks', JSON.stringify(myStocks));
-        localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
-        openDetail(ticker);
-        render();
-    }
-
-    function saveData(ticker, field, val) {
-        if (field === 'gav') {
-            if (!val || val == 0) delete myGAVs[ticker];
-            else myGAVs[ticker] = parseFloat(val);
-            localStorage.setItem('myGAVs', JSON.stringify(myGAVs));
-        } else {
-            if (!val) delete myNotes[ticker];
-            else myNotes[ticker] = val;
-            localStorage.setItem('myNotes', JSON.stringify(myNotes));
-        }
-        render();
+        } catch (e) { document.getElementById('list').innerHTML = "Feil ved henting."; }
     }
 
     function setFilter(f) {
@@ -241,24 +161,26 @@
 
     function openDetail(ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
+        const index = stocks.find(x => x.Aksje === "OSEBX.OL");
         const detail = document.getElementById('detailContent');
         const inMine = myStocks.includes(ticker);
         const inRadar = radarStocks.includes(ticker);
         const gav = myGAVs[ticker] || "";
         const note = myNotes[ticker] || "";
         
-        let profitHtml = "";
-        if (gav) {
-            const diff = ((s["Siste kurs"] - gav) / gav) * 100;
-            profitHtml = `<div style="color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-size:18px; margin-top:5px;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%</div>`;
-        }
+        const getPerf = (obj, dager) => {
+            if (!obj || !obj.Historikk || obj.Historikk.length < dager) return 0;
+            const start = obj.Historikk[obj.Historikk.length - dager].pris;
+            return ((obj["Siste kurs"] - start) / start) * 100;
+        };
+
+        const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
         detail.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
-                <div style="font-size:36px; font-weight:900;">${s.Aksje}</div>
-                <div style="font-size:14px; color:var(--secondary); font-weight:700; margin-top:-5px;">${s.Navn || ""}</div>
+                <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
+                <div style="font-size:14px; color:var(--secondary); font-weight:700;">${s.Navn || ""}</div>
                 <div style="font-size:26px; font-weight:800; margin-top:10px;">${s["Siste kurs"].toFixed(2)}</div>
-                ${profitHtml}
             </div>
 
             <div class="time-row">
@@ -272,31 +194,31 @@
             <div class="chart-container"><canvas id="mainChart"></canvas></div>
 
             <div class="info-grid">
-                <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI (14) <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.RSI_14 < 35 ? '#32d74b' : (s.RSI_14 > 65 ? '#ff453a' : 'white')}">${s.RSI_14.toFixed(1)}</div></div>
-                <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Volumøkning <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
-                <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">Risk/Reward <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.Risk_Reward > 2 ? '#32d74b' : 'white'}">${s.Risk_Reward.toFixed(2)}</div></div>
-                <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend === 'Bull' ? '#32d74b' : '#ff453a'}">${s.MACD_Trend}</div></div>
+                <div class="info-box"><div class="label">RSI</div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
+                <div class="info-box"><div class="label">Vol %</div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
+                <div class="info-box"><div class="label">R/R</div><div class="val">${s.Risk_Reward.toFixed(2)}</div></div>
+                <div class="info-box"><div class="label">Trend</div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
+            </div>
+
+            <div class="rel-strength-box">
+                <div class="label" style="margin-bottom:12px;">Relativ styrke vs OSEBX</div>
+                <div class="rel-grid">
+                    ${perioder.map(p => {
+                        const diff = getPerf(s, p.d) - getPerf(index, p.d);
+                        return `<div><div style="font-size:10px;color:var(--secondary);font-weight:800;">${p.l}</div>
+                                <div style="font-size:12px;font-weight:700;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${diff.toFixed(1)}%</div></div>`;
+                    }).join('')}
+                </div>
             </div>
 
             <div class="tech-list">
-                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(2)} / ${s.SMA_200.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(2)} / ${s.EMA_20.toFixed(2)} / ${(s.EMA_200 || 0).toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'boll')"><span>Bollinger O/N ⓘ</span><b>${s.Ovre_Bollinger.toFixed(2)} / ${s.Nedre_Bollinger.toFixed(2)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / Motstand ⓘ</span><b>${s.Stotte_50.toFixed(2)} / ${s.Motstand_50.toFixed(2)}</b></div>
+                <div class="tech-row"><span>SMA 50 / 200</span><b>${s.SMA_50.toFixed(1)} / ${s.SMA_200.toFixed(1)}</b></div>
+                <div class="tech-row" style="border:none;"><span>EMA 9 / 20 / 200</span><b>${s.EMA_9.toFixed(1)} / ${s.EMA_20.toFixed(1)} / ${s.EMA_200.toFixed(1)}</b></div>
             </div>
 
             <div class="list-actions">
-                <button class="action-btn ${inMine?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine aksjer':'+ Mine aksjer'}</button>
-                <button class="action-btn ${inRadar?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ På radaren':'+ På radaren'}</button>
-            </div>
-
-            <div class="user-data-section">
-                <div class="user-data-title">Mine data & Strategi</div>
-                <div class="label">Gjennomsnittlig anskaffelsesverdi (GAV)</div>
-                <input type="number" class="gav-input" value="${gav}" placeholder="0.00" onchange="saveData('${ticker}', 'gav', this.value)">
-                
-                <div class="label">Notater & Tradingstrategi</div>
-                <textarea placeholder="F.eks. 'Kjøp ved breakout'..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
+                <button class="action-btn ${inMine?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine':' + Mine'}</button>
+                <button class="action-btn ${inRadar?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ Radar':' + Radar'}</button>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
@@ -317,37 +239,18 @@
                 datasets: [{
                     data: history.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
-                    borderWidth: 2.5,
-                    pointRadius: 0,
-                    fill: true,
-                    backgroundColor: 'rgba(10, 132, 255, 0.05)',
-                    tension: 0.3
+                    borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
                 }]
             },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#8e8e93', autoSkip: true, maxTicksLimit: 5, font: { size: 10 } }, grid: { display: false } },
-                    y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     }
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
-        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
-        const activeBtn = document.getElementById('btn-' + currentSort);
-        activeBtn.classList.add('active-sort');
-        activeBtn.innerHTML = currentSort.toUpperCase() + (isAscending ? "↑" : "↓");
-
-        let filtered = stocks.filter(s => {
-            const matchesSearch = s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query));
-            if (currentFilter === 'mine') return matchesSearch && myStocks.includes(s.Aksje);
-            if (currentFilter === 'radar') return matchesSearch && radarStocks.includes(s.Aksje);
-            return matchesSearch;
-        });
+        let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
+        if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
+        if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
 
         filtered.sort((a, b) => {
             let vA, vB;
@@ -358,35 +261,34 @@
             return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
 
-        document.getElementById('list').innerHTML = filtered.map(s => {
-            const gav = myGAVs[s.Aksje];
-            let profitHtml = "";
-            if (gav) {
-                const diff = ((s["Siste kurs"] - gav) / gav) * 100;
-                profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`;
-            }
-            return `
-                <div class="stock-card" onclick="openDetail('${s.Aksje}')">
-                    <div class="row-top">
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="ticker">
-                                ${s.Aksje} 
-                                ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} 
-                                ${profitHtml}
-                            </span>
-                            <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
-                        </div>
-                        <span class="price">${s["Siste kurs"].toFixed(2)}</span>
+        document.getElementById('list').innerHTML = filtered.map(s => `
+            <div class="stock-card" onclick="openDetail('${s.Aksje}')">
+                <div class="row-top">
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''}</span>
+                        <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
                     </div>
-                    <div class="row-indicators">
-                        <div class="mini-stat" onclick="showTip(event, 'rsi')"><span class="label">RSI <i class="info-i">ⓘ</i></span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
-                        <div class="mini-stat" onclick="showTip(event, 'volum')"><span class="label">Vol % <i class="info-i">ⓘ</i></span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                        <div class="mini-stat" onclick="showTip(event, 'trend')"><span class="label">Trend <i class="info-i">ⓘ</i></span><span class="val">${s.MACD_Trend}</span></div>
-                        <div class="mini-stat" onclick="showTip(event, 'rr')"><span class="label">R/R <i class="info-i">ⓘ</i></span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
-                    </div>
+                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
-            `;
-        }).join('');
+                <div class="row-indicators">
+                    <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
+                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleList(ticker, type) {
+        let list = type === 'mine' ? myStocks : radarStocks;
+        let other = type === 'mine' ? radarStocks : myStocks;
+        const idx = list.indexOf(ticker);
+        if (idx > -1) list.splice(idx, 1);
+        else { list.push(ticker); const oIdx = other.indexOf(ticker); if(oIdx > -1) other.splice(oIdx, 1); }
+        localStorage.setItem('myStocks', JSON.stringify(myStocks));
+        localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
+        openDetail(ticker);
+        render();
     }
 
     function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
