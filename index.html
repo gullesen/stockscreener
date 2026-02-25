@@ -3,40 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v7.1</title>
+    <title>StockScreener Pro v7.5</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg: #000000;
-            --card: #1c1c1e;
-            --text: #ffffff;
-            --secondary: #8e8e93;
-            --green: #32d74b;
-            --red: #ff453a;
-            --blue: #0a84ff;
-            --orange: #ff9f0a;
+            --bg: #000000; --card: #1c1c1e; --text: #ffffff; --secondary: #8e8e93;
+            --green: #32d74b; --red: #ff453a; --blue: #0a84ff; --orange: #ff9f0a;
         }
         body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background: var(--bg); color: var(--text); 
-            margin: 0; padding: env(safe-area-inset-top) 15px 120px 15px;
-            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); 
+            margin: 0; padding: env(safe-area-inset-top) 15px 120px 15px; -webkit-tap-highlight-color: transparent;
         }
-        
-        /* HEADER */
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
         .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         h1 { font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-        
         .timestamp-container { text-align: right; line-height: 1.2; }
         .update-label { font-size: 8px; color: var(--blue); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: block; }
         .update-time { font-size: 10px; color: var(--secondary); font-weight: 600; white-space: nowrap; }
-
         input, .sort-btn, .filter-btn, textarea { 
-            width: 100%; padding: 12px; border-radius: 12px; 
-            border: none; background: var(--card); color: var(--text); 
+            width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--card); color: var(--text); 
             font-size: 14px; margin-bottom: 8px; box-sizing: border-box; outline: none;
         }
         .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -44,70 +31,47 @@
         .active-filter { background: var(--blue) !important; }
         .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
-
-        /* KORT */
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .ticker { font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 5px; }
         .price { font-size: 20px; font-weight: 700; }
-        
         .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); font-weight: 900; }
         .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px;}
-
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
         .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 700; }
         .info-i { color: var(--blue); font-style: normal; font-size: 11px; margin-left: 2px; }
-
-        /* DETALJSIDE */
         #detailPage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 2000; display: none; overflow-y: auto;
-            padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; 
+            display: none; overflow-y: auto; padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
         }
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
-        
-        /* CHART LAYOUT */
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
         .chart-price-container { height: 180px; margin-bottom: 5px; }
         .chart-rsi-container { height: 80px; }
-
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
-        
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
-
         .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .rel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; text-align: center; }
-
         .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .active-mine { background: rgba(255, 159, 10, 0.15); border-color: var(--orange); color: var(--orange); }
-        .active-radar { background: rgba(10, 132, 255, 0.15); border-color: var(--blue); color: var(--blue); }
-
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
-
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
-        .user-data-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 15px; }
-        .gav-input { background: #2c2c2e; width: 100%; margin: 8px 0 15px 0; height: 45px; text-align: left; padding: 0 15px; }
-        textarea { background: #2c2c2e; resize: none; height: 100px; padding: 12px; margin-top: 5px; }
-
         #tooltipToast {
-            position: fixed; bottom: -120px; left: 20px; right: 20px;
-            background: #2c2c2e; color: white; padding: 16px; border-radius: 14px;
-            z-index: 3000; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: fixed; bottom: -120px; left: 20px; right: 20px; background: #2c2c2e; color: white; 
+            padding: 16px; border-radius: 14px; z-index: 3000; transition: bottom 0.3s ease; 
             border-left: 5px solid var(--blue); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
         #tooltipToast.active { bottom: 40px; }
     </style>
 </head>
 <body>
-
 <div class="sticky-header">
     <div class="header-top">
         <h1>StockScreener</h1>
@@ -130,55 +94,53 @@
         <div id="btn-ticker" class="sort-btn" onclick="setSort('ticker')">Navn</div>
     </div>
 </div>
-
 <div id="list">Laster data...</div>
-
 <div id="detailPage">
-    <div class="detail-nav">
-        <div class="back-btn" onclick="closeDetail()">← Tilbake</div>
-    </div>
+    <div class="detail-nav"><div class="back-btn" onclick="closeDetail()">← Tilbake</div></div>
     <div id="detailContent"></div>
 </div>
-
 <div id="tooltipToast" onclick="hideTip()"></div>
 
 <script>
-    let stocks = [];
-    let currentSort = 'ticker';
-    let isAscending = true;
-    let currentFilter = 'all';
+    let stocks = []; let currentSort = 'ticker'; let isAscending = true; let currentFilter = 'all';
     let myStocks = JSON.parse(localStorage.getItem('myStocks')) || [];
     let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
-    let priceChart = null;
-    let rsiChart = null;
+    let priceChart = null; let rsiChart = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
-        volum: "<b>Volumøkning:</b> Dagens volum mot 20-dagers snitt. Høyt volum bekrefter styrke.",
-        rr: "<b>Risk/Reward:</b> Oppside mot nedside. Bør ideelt sett være over 2.0.",
-        trend: "<b>Trend:</b> Basert på MACD. Indikerer BULL (opp) eller BEAR (ned) momentum.",
-        sma: "<b>SMA:</b> Glidende snitt. SMA 200 er et viktig langsiktig nivå.",
-        ema: "<b>EMA:</b> Eksponentielle snitt som reagerer raskere på prisendringer.",
-        boll: "<b>Bollinger:</b> Viser volatilitet og prisbånd.",
-        support: "<b>Støtte/Motstand:</b> Nivåer hvor kursen ofte snur."
+        rsi: "<b>RSI:</b> 30=Oversolgt, 70=Overkjøpt.",
+        volum: "<b>Volum %:</b> Dagens volum mot 20-dg snitt.",
+        rr: "<b>R/R:</b> Oppside mot nedside.",
+        trend: "<b>Trend:</b> MACD-retning.",
+        sma: "<b>SMA:</b> Glidende snitt.",
+        ema: "<b>EMA:</b> Snitt som reagerer raskt.",
+        boll: "<b>Bollinger:</b> Prisens volatilitetsbånd.",
+        support: "<b>Støtte:</b> Gulvet i kursen."
     };
 
-    const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/c3f09349a7ddb17f23cca301f031c71fc1173210/aksjer.json" + new Date().getTime();
+    // DENNE URL-en er nå permanent og peker alltid til nyeste versjon
+    const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
 
     async function load() {
         try {
             const res = await fetch(DATA_URL);
+            if (!res.ok) throw new Error("GitHub svarte ikke");
             const data = await res.json();
-            if (data.oppdatert) {
-                stocks = data.aksjer;
-                const tp = data.oppdatert.split(" ");
-                document.getElementById('ts-date').innerText = tp[0];
-                document.getElementById('ts-time').innerText = tp[1];
-            } else { stocks = data; }
+            
+            if (data && data.aksjer) {
+                stocks = data.aksjer.filter(s => s.Aksje && s.Historikk);
+                if (data.oppdatert) {
+                    const tp = data.oppdatert.split(" ");
+                    document.getElementById('ts-date').innerText = tp[0] || "--";
+                    document.getElementById('ts-time').innerText = tp[1] || "--";
+                }
+            } else { stocks = Array.isArray(data) ? data : []; }
             render();
-        } catch (e) { document.getElementById('list').innerHTML = "Feil ved henting."; }
+        } catch (e) {
+            document.getElementById('list').innerHTML = `<div style="padding:20px; color:var(--red);">FEIL VED HENTING.<br><small>${e.message}</small></div>`;
+        }
     }
 
     function showTip(e, key) {
@@ -206,6 +168,7 @@
     function openDetail(ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
         const index = stocks.find(x => x.Aksje === "OSEBX.OL");
+        if(!s) return;
         const detail = document.getElementById('detailContent');
         const inMine = myStocks.includes(ticker);
         const inRadar = radarStocks.includes(ticker);
@@ -233,7 +196,6 @@
                 <div style="font-size:26px; font-weight:800; margin-top:10px;">${s["Siste kurs"].toFixed(2)}</div>
                 ${profitHtml}
             </div>
-
             <div class="time-row">
                 <div class="time-btn" id="t-7" onclick="updateChart(7, '${ticker}')">1U</div>
                 <div class="time-btn active" id="t-30" onclick="updateChart(30, '${ticker}')">1M</div>
@@ -241,19 +203,16 @@
                 <div class="time-btn" id="t-180" onclick="updateChart(180, '${ticker}')">6M</div>
                 <div class="time-btn" id="t-365" onclick="updateChart(365, '${ticker}')">1Å</div>
             </div>
-
             <div class="charts-wrapper">
                 <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
                 <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
             </div>
-
             <div class="info-grid">
                 <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
                 <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">R/R <i class="info-i">ⓘ</i></div><div class="val">${s.Risk_Reward.toFixed(2)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
             </div>
-
             <div class="rel-strength-box">
                 <div class="label" style="margin-bottom:12px;">Relativ styrke vs OSEBX</div>
                 <div class="rel-grid">
@@ -264,24 +223,18 @@
                     }).join('')}
                 </div>
             </div>
-
             <div class="tech-list">
                 <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(1)} / ${s.SMA_200.toFixed(1)}</b></div>
                 <div class="tech-row" style="border:none;" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(1)} / ${s.EMA_20.toFixed(1)} / ${s.EMA_200.toFixed(1)}</b></div>
             </div>
-
             <div class="list-actions">
-                <button class="action-btn ${inMine?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${inMine?'✓ Mine':' + Mine'}</button>
-                <button class="action-btn ${inRadar?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${inRadar?'✓ Radar':' + Radar'}</button>
+                <button class="action-btn ${myStocks.includes(ticker)?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${myStocks.includes(ticker)?'✓ Mine':' + Mine'}</button>
+                <button class="action-btn ${radarStocks.includes(ticker)?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${radarStocks.includes(ticker)?'✓ Radar':' + Radar'}</button>
             </div>
-
             <div class="user-data-section">
-                <div class="user-data-title">Mine data & Strategi</div>
-                <div class="label">Gjennomsnittlig anskaffelsesverdi (GAV)</div>
-                <input type="number" class="gav-input" id="gav-input" value="${gav}" placeholder="0.00" onchange="saveData('${ticker}', 'gav', this.value)">
-                
-                <div class="label">Notater & Strategi</div>
-                <textarea placeholder="Strateginotater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
+                <div class="user-data-title">Mine data</div>
+                <input type="number" class="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
+                <textarea placeholder="Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
@@ -290,85 +243,29 @@
 
     function updateChart(dager, ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
+        if(!s || !s.Historikk) return;
         const history = s.Historikk.slice(-dager);
         const labels = history.map(h => h.dato);
-        
-        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('t-' + dager).classList.add('active');
-        
-        if (priceChart) priceChart.destroy();
-        if (rsiChart) rsiChart.destroy();
-
-        // 1. PRICE CHART
+        if (priceChart) priceChart.destroy(); if (rsiChart) rsiChart.destroy();
         const ctxPrice = document.getElementById('priceChart').getContext('2d');
         priceChart = new Chart(ctxPrice, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: history.map(h => h.pris),
-                    borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
-                    borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
-                }]
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { 
-                    x: { display: false }, 
-                    y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
-                }
-            }
+            type: 'line', data: { labels: labels, datasets: [{
+                data: history.map(h => h.pris), borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
+            }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } } } }
         });
-
-        // 2. RSI CHART MED 30/70 LINJER
         const ctxRsi = document.getElementById('rsiChart').getContext('2d');
         rsiChart = new Chart(ctxRsi, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: history.map(h => h.rsi),
-                    borderColor: '#0a84ff',
-                    borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
-                }]
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { 
-                    x: { grid: { display: false }, ticks: { color: '#8e8e93', autoSkip: true, maxTicksLimit: 5, font: { size: 10 } } },
-                    y: { 
-                        min: 0, max: 100,
-                        grid: { 
-                            color: (context) => {
-                                if (context.tick.value === 30 || context.tick.value === 70) return '#555555';
-                                return '#2c2c2e';
-                            },
-                            lineWidth: (context) => (context.tick.value === 30 || context.tick.value === 70 ? 1 : 0.5)
-                        },
-                        ticks: { 
-                            color: '#8e8e93', 
-                            callback: (val) => (val === 30 || val === 70 || val === 50 ? val : ''),
-                            font: { size: 9 } 
-                        }
-                    }
-                }
-            }
+            type: 'line', data: { labels: labels, datasets: [{
+                data: history.map(h => h.rsi), borderColor: '#0a84ff', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
+            }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#8e8e93', autoSkip: true, maxTicksLimit: 5, font: { size: 10 } } }, y: { min: 0, max: 100, grid: { color: (c) => (c.tick.value === 30 || c.tick.value === 70 ? '#555555' : '#2c2c2e'), lineWidth: (c) => (c.tick.value === 30 || c.tick.value === 70 ? 1 : 0.5) }, ticks: { color: '#8e8e93', callback: (v) => (v === 30 || v === 70 || v === 50 ? v : ''), font: { size: 9 } } } } }
         });
     }
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
-        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
-        const activeBtn = document.getElementById('btn-' + currentSort);
-        activeBtn.classList.add('active-sort');
-        activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
-
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
-
         filtered.sort((a, b) => {
             let vA, vB;
             if(currentSort === 'rsi') { vA = a.RSI_14; vB = b.RSI_14; }
@@ -377,59 +274,40 @@
             else { vA = a.Aksje; vB = b.Aksje; }
             return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
-
         document.getElementById('list').innerHTML = filtered.map(s => {
             const gav = myGAVs[s.Aksje];
-            let profitHtml = "";
-            if (gav) {
-                const diff = ((s["Siste kurs"] - gav) / gav) * 100;
-                profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`;
-            }
-            return `
-                <div class="stock-card" onclick="openDetail('${s.Aksje}')">
-                    <div class="row-top">
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${profitHtml}</span>
-                            <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
-                        </div>
-                        <span class="price">${s["Siste kurs"].toFixed(2)}</span>
+            let profitHtml = ""; if (gav) { const diff = ((s["Siste kurs"] - gav) / gav) * 100; profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`; }
+            return `<div class="stock-card" onclick="openDetail('${s.Aksje}')">
+                <div class="row-top">
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${profitHtml}</span>
+                        <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
                     </div>
-                    <div class="row-indicators">
-                        <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
-                        <div class="mini-stat"><span class="label">VOL %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
-                        <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
-                        <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
-                    </div>
+                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
-            `;
+                <div class="row-indicators">
+                    <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat"><span class="label">VOL %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
+                    <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
+                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
+                </div>
+            </div>`;
         }).join('');
     }
 
     function toggleList(ticker, type) {
-        let list = type === 'mine' ? myStocks : radarStocks;
-        let other = type === 'mine' ? radarStocks : myStocks;
+        let list = type === 'mine' ? myStocks : radarStocks; let other = type === 'mine' ? radarStocks : myStocks;
         const idx = list.indexOf(ticker);
-        if (idx > -1) list.splice(idx, 1);
-        else { list.push(ticker); const oIdx = other.indexOf(ticker); if(oIdx > -1) other.splice(oIdx, 1); }
-        localStorage.setItem('myStocks', JSON.stringify(myStocks));
-        localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
-        openDetail(ticker);
-        render();
+        if (idx > -1) list.splice(idx, 1); else { list.push(ticker); const oIdx = other.indexOf(ticker); if(oIdx > -1) other.splice(oIdx, 1); }
+        localStorage.setItem('myStocks', JSON.stringify(myStocks)); localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
+        openDetail(ticker); render();
     }
 
     function saveData(ticker, field, val) {
-        if (field === 'gav') {
-            if (!val || val == 0) delete myGAVs[ticker];
-            else myGAVs[ticker] = parseFloat(val);
-            localStorage.setItem('myGAVs', JSON.stringify(myGAVs));
-        } else {
-            if (!val) delete myNotes[ticker];
-            else myNotes[ticker] = val;
-            localStorage.setItem('myNotes', JSON.stringify(myNotes));
-        }
+        if (field === 'gav') { if (!val || val == 0) delete myGAVs[ticker]; else myGAVs[ticker] = parseFloat(val); localStorage.setItem('myGAVs', JSON.stringify(myGAVs)); }
+        else { if (!val) delete myNotes[ticker]; else myNotes[ticker] = val; localStorage.setItem('myNotes', JSON.stringify(myNotes)); }
         render();
     }
-
     function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
     load();
 </script>
