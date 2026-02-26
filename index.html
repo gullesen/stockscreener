@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v7.7</title>
+    <title>StockScreener Pro v7.8</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,7 +39,6 @@
         .price { font-size: 20px; font-weight: 700; }
         .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); font-weight: 900; }
         .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px;}
-        
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
         .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
@@ -55,7 +54,7 @@
         
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
         .chart-price-container { height: 180px; margin-bottom: 25px; }
-        .chart-rsi-container { height: 100px; }
+        .chart-rsi-container { height: 100px; } /* Beholdt høyden */
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
@@ -129,12 +128,12 @@
     let priceChart = null; let rsiChart = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (kjøpssignal), over 70 er overkjøpt (salgssignal).",
+        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt.",
         volum: "<b>Volum %:</b> Dagens handelsvolum sammenlignet med 20-dagers gjennomsnitt.",
-        rr: "<b>Risk/Reward:</b> Potensiell oppside mot potensiell nedside. Verdier over 2.0 anses som gode.",
+        rr: "<b>Risk/Reward:</b> Potensiell oppside mot potensiell nedside. Bør ideelt sett være over 2.0.",
         trend: "<b>Trend:</b> Basert på MACD. Bull indikerer positivt momentum, Bear indikerer negativt.",
         sma: "<b>SMA:</b> Glidende snitt. 200-dagers snitt er en viktig indikator for den lange trenden.",
-        ema: "<b>EMA:</b> Eksponentielt glidende snitt som reagerer raskere på prisendringer.",
+        ema: "<b>EMA:</b> Eksponentielt snitt som reagerer raskere på prisendringer.",
         boll: "<b>Bollinger:</b> Prisens volatilitetsbånd. Brudd på båndene kan indikere trendskifte.",
         support: "<b>Støtte/Motstand:</b> Historiske prisnivåer aksjen ofte har vanskelig for å bryte."
     };
@@ -221,8 +220,7 @@
             </div>
             <div class="charts-wrapper">
                 <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
-                <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
-            </div>
+                <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div> </div>
             <div class="info-grid">
                 <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
@@ -288,10 +286,12 @@
                     y: { 
                         min: 0, max: 100, 
                         grid: { 
-                            color: (c) => ([30, 70].includes(c.tick.value) ? 'rgba(255, 255, 255, 0.4)' : 'rgba(44, 44, 46, 1)'), 
-                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 1.5 : 0.5) 
+                            // SIKRER TYDELIGE HVITE LINJER PÅ 30 OG 70, GRÅ PÅ RESTEN
+                            color: (c) => ([30, 70].includes(c.tick.value) ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.15)'), 
+                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 2 : 1) 
                         }, 
                         ticks: { 
+                            // HVITE TALL PÅ 30 OG 70, GRÅ PÅ RESTEN
                             color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#8e8e93'), 
                             stepSize: 10,
                             callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''), 
