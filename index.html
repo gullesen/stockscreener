@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v8.0</title>
+    <title>StockScreener Pro v8.1</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -66,8 +66,6 @@
 
         .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .active-mine { border-color: var(--orange); color: var(--orange); background: rgba(255,159,10,0.1); }
-        .active-radar { border-color: var(--blue); color: var(--blue); background: rgba(10,132,255,0.1); }
 
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
@@ -75,7 +73,6 @@
 
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         .user-data-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 15px; }
-        .gav-input { background: #2c2c2e; width: 100%; margin: 8px 0 15px 0; height: 45px; text-align: left; padding: 0 15px; color: white; border-radius: 8px; border: none; }
 
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white; 
@@ -128,14 +125,14 @@
     let priceChart = null; let rsiChart = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (hvite linjer markerer 30/70), over 70 er overkjøpt.",
+        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt, over 70 er overkjøpt. Hjelpelinjer på 30 og 70 er hvite.",
         volum: "<b>Volum %:</b> Dagens handelsvolum sammenlignet med 20-dagers gjennomsnitt.",
         rr: "<b>Risk/Reward:</b> Potensiell oppside mot potensiell nedside.",
         trend: "<b>Trend:</b> Basert på MACD. Bull indikerer positivt momentum.",
         sma: "<b>SMA:</b> Glidende snitt over tid.",
         ema: "<b>EMA:</b> Eksponentielt snitt som reagerer raskt.",
         boll: "<b>Bollinger:</b> Prisens volatilitetsbånd.",
-        support: "<b>Støtte:</b> Historiske prisnivåer aksjen ofte holder."
+        support: "<b>Støtte:</b> Lokalt bunnivå siste 50 dager."
     };
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
@@ -151,11 +148,9 @@
                     document.getElementById('ts-date').innerText = tp[0] || "--";
                     document.getElementById('ts-time').innerText = tp[1] || "--";
                 }
-            } else { stocks = Array.isArray(data) ? data : []; }
+            }
             render();
-        } catch (e) {
-            document.getElementById('list').innerHTML = `<div style="padding:20px; color:var(--red);">FEIL VED HENTING.<br><small>${e.message}</small></div>`;
-        }
+        } catch (e) { document.getElementById('list').innerHTML = "Feil ved henting."; }
     }
 
     function showTip(e, key) {
@@ -253,11 +248,7 @@
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
-        
-        // Viktig: Bruk setTimeout for å sikre at canvas-elementene er rendret før Chart.js prøver å tegne
-        setTimeout(() => {
-            updateChart(30, ticker);
-        }, 50);
+        setTimeout(() => updateChart(30, ticker), 100);
     }
 
     function updateChart(dager, ticker) {
@@ -291,19 +282,15 @@
                     y: { 
                         min: 0, max: 100, 
                         grid: { 
-                            // Hvite linjer på 30 og 70, grå på 0, 50, 100
-                            color: (c) => {
-                                if ([30, 70].includes(c.tick.value)) return '#ffffff';
-                                if ([0, 50, 100].includes(c.tick.value)) return '#444444';
-                                return 'transparent';
-                            }, 
-                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 1.5 : 1) 
+                            display: true,
+                            color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#444444'), 
+                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 2 : 1) 
                         }, 
                         ticks: { 
                             color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#8e8e93'), 
                             stepSize: 10,
                             callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''), 
-                            font: { size: 9 } 
+                            font: { size: 9, weight: (c) => ([30, 70].includes(c.tick.value) ? 'bold' : 'normal') } 
                         } 
                     } 
                 } 
