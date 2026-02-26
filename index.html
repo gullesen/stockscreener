@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v7.9</title>
+    <title>StockScreener Pro v8.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -53,7 +53,7 @@
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
         
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
-        .chart-price-container { height: 180px; margin-bottom: 25px; }
+        .chart-price-container { height: 180px; margin-bottom: 20px; }
         .chart-rsi-container { height: 100px; }
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -75,6 +75,7 @@
 
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         .user-data-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 15px; }
+        .gav-input { background: #2c2c2e; width: 100%; margin: 8px 0 15px 0; height: 45px; text-align: left; padding: 0 15px; color: white; border-radius: 8px; border: none; }
 
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white; 
@@ -113,23 +114,7 @@
 
 <div id="detailPage">
     <div class="detail-nav"><div class="back-btn" onclick="closeDetail()">← Tilbake</div></div>
-    
-    <div id="detailHeader" style="text-align:center; margin-bottom:20px;"></div>
-
-    <div class="time-row">
-        <div class="time-btn" id="t-7" onclick="updateChart(7)">1U</div>
-        <div class="time-btn active" id="t-30" onclick="updateChart(30)">1M</div>
-        <div class="time-btn" id="t-90" onclick="updateChart(90)">3M</div>
-        <div class="time-btn" id="t-180" onclick="updateChart(180)">6M</div>
-        <div class="time-btn" id="t-365" onclick="updateChart(365)">1Å</div>
-    </div>
-
-    <div class="charts-wrapper">
-        <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
-        <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
-    </div>
-
-    <div id="detailStats"></div>
+    <div id="detailContent"></div>
 </div>
 
 <div id="tooltipToast" onclick="hideTip()"></div>
@@ -141,7 +126,6 @@
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
     let priceChart = null; let rsiChart = null;
-    let currentTicker = null;
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (hvite linjer markerer 30/70), over 70 er overkjøpt.",
@@ -167,9 +151,11 @@
                     document.getElementById('ts-date').innerText = tp[0] || "--";
                     document.getElementById('ts-time').innerText = tp[1] || "--";
                 }
-            }
+            } else { stocks = Array.isArray(data) ? data : []; }
             render();
-        } catch (e) { document.getElementById('list').innerHTML = "Feil ved henting."; }
+        } catch (e) {
+            document.getElementById('list').innerHTML = `<div style="padding:20px; color:var(--red);">FEIL VED HENTING.<br><small>${e.message}</small></div>`;
+        }
     }
 
     function showTip(e, key) {
@@ -195,11 +181,10 @@
     }
 
     function openDetail(ticker) {
-        currentTicker = ticker;
         const s = stocks.find(x => x.Aksje === ticker);
         const index = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0];
         if(!s) return;
-        
+        const detail = document.getElementById('detailContent');
         const inMine = myStocks.includes(ticker);
         const inRadar = radarStocks.includes(ticker);
         const gav = myGAVs[ticker] || "";
@@ -219,14 +204,24 @@
 
         const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
-        document.getElementById('detailHeader').innerHTML = `
-            <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
-            <div style="font-size:14px; color:var(--secondary); font-weight:700;">${s.Navn || ""}</div>
-            <div style="font-size:26px; font-weight:800; margin-top:10px;">${s["Siste kurs"].toFixed(2)}</div>
-            ${profitHtml}
-        `;
-
-        document.getElementById('detailStats').innerHTML = `
+        detail.innerHTML = `
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
+                <div style="font-size:14px; color:var(--secondary); font-weight:700;">${s.Navn || ""}</div>
+                <div style="font-size:26px; font-weight:800; margin-top:10px;">${s["Siste kurs"].toFixed(2)}</div>
+                ${profitHtml}
+            </div>
+            <div class="time-row">
+                <div class="time-btn" id="t-7" onclick="updateChart(7, '${ticker}')">1U</div>
+                <div class="time-btn active" id="t-30" onclick="updateChart(30, '${ticker}')">1M</div>
+                <div class="time-btn" id="t-90" onclick="updateChart(90, '${ticker}')">3M</div>
+                <div class="time-btn" id="t-180" onclick="updateChart(180, '${ticker}')">6M</div>
+                <div class="time-btn" id="t-365" onclick="updateChart(365, '${ticker}')">1Å</div>
+            </div>
+            <div class="charts-wrapper">
+                <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
+                <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
+            </div>
             <div class="info-grid">
                 <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
@@ -253,17 +248,21 @@
             </div>
             <div class="user-data-section">
                 <div class="user-data-title">Mine data</div>
-                <input type="number" class="gav-input" value="${gav}" placeholder="GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
+                <input type="number" class="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
                 <textarea placeholder="Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
-        updateChart(30);
+        
+        // Viktig: Bruk setTimeout for å sikre at canvas-elementene er rendret før Chart.js prøver å tegne
+        setTimeout(() => {
+            updateChart(30, ticker);
+        }, 50);
     }
 
-    function updateChart(dager) {
-        if(!currentTicker) return;
-        const s = stocks.find(x => x.Aksje === currentTicker);
+    function updateChart(dager, ticker) {
+        const s = stocks.find(x => x.Aksje === ticker);
+        if(!s || !s.Historikk) return;
         const history = s.Historikk.slice(-dager);
         const labels = history.map(h => h.dato);
         
@@ -271,20 +270,19 @@
         const btn = document.getElementById('t-' + dager);
         if(btn) btn.classList.add('active');
 
-        if (priceChart) priceChart.destroy(); 
-        if (rsiChart) rsiChart.destroy();
+        if (priceChart) priceChart.destroy(); if (rsiChart) rsiChart.destroy();
 
         const ctxPrice = document.getElementById('priceChart').getContext('2d');
         priceChart = new Chart(ctxPrice, {
             type: 'line', data: { labels: labels, datasets: [{
-                data: history.map(h => h.pris), borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a', borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
+                data: history.map(h => h.pris), borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
             }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } } } }
         });
 
         const ctxRsi = document.getElementById('rsiChart').getContext('2d');
         rsiChart = new Chart(ctxRsi, {
             type: 'line', data: { labels: labels, datasets: [{
-                data: history.map(h => h.rsi), borderColor: '#0a84ff', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
+                data: history.map(h => h.rsi), borderColor: '#0a84ff', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
             }]}, options: { 
                 responsive: true, maintainAspectRatio: false, 
                 plugins: { legend: { display: false } }, 
@@ -293,14 +291,19 @@
                     y: { 
                         min: 0, max: 100, 
                         grid: { 
-                            color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#2c2c2e'), 
-                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 1.5 : 0.5) 
+                            // Hvite linjer på 30 og 70, grå på 0, 50, 100
+                            color: (c) => {
+                                if ([30, 70].includes(c.tick.value)) return '#ffffff';
+                                if ([0, 50, 100].includes(c.tick.value)) return '#444444';
+                                return 'transparent';
+                            }, 
+                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 1.5 : 1) 
                         }, 
                         ticks: { 
                             color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#8e8e93'), 
                             stepSize: 10,
                             callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''), 
-                            font: { size: 10, weight: (c) => ([30, 70].includes(c.tick.value) ? 'bold' : 'normal') } 
+                            font: { size: 9 } 
                         } 
                     } 
                 } 
@@ -310,6 +313,12 @@
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
+        const activeBtn = document.getElementById('btn-' + currentSort);
+        if(activeBtn) {
+            activeBtn.classList.add('active-sort');
+            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
+        }
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
@@ -355,7 +364,7 @@
         else { if (!val) delete myNotes[ticker]; else myNotes[ticker] = val; localStorage.setItem('myNotes', JSON.stringify(myNotes)); }
         render();
     }
-    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; currentTicker = null; }
+    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
     load();
 </script>
 </body>
