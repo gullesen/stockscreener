@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v8.3</title>
+    <title>StockScreener Pro v8.4</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -43,6 +43,7 @@
         .mini-stat { display: flex; flex-direction: column; }
         .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 700; }
+        .info-i { color: var(--blue); font-style: normal; font-size: 11px; margin-left: 2px; }
 
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; 
@@ -52,9 +53,8 @@
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
         
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
-        .chart-box { position: relative; width: 100%; }
-        .price-height { height: 180px; margin-bottom: 25px; }
-        .rsi-height { height: 100px; }
+        .chart-price-container { height: 180px; margin-bottom: 25px; }
+        .chart-rsi-container { height: 110px; }
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
@@ -105,7 +105,23 @@
 
 <div id="detailPage">
     <div class="detail-nav"><div class="back-btn" onclick="closeDetail()">← Tilbake</div></div>
-    <div id="detailContent"></div>
+    
+    <div id="detailHeaderInfo"></div>
+
+    <div class="time-row">
+        <div class="time-btn" id="t-7" onclick="changeTime(7)">1U</div>
+        <div class="time-btn active" id="t-30" onclick="changeTime(30)">1M</div>
+        <div class="time-btn" id="t-90" onclick="changeTime(90)">3M</div>
+        <div class="time-btn" id="t-180" onclick="changeTime(180)">6M</div>
+        <div class="time-btn" id="t-365" onclick="changeTime(365)">1Å</div>
+    </div>
+
+    <div class="charts-wrapper">
+        <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
+        <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
+    </div>
+
+    <div id="detailBodyContent"></div>
 </div>
 
 <div id="tooltipToast" onclick="hideTip()"></div>
@@ -117,16 +133,17 @@
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
     let priceChart = null; let rsiChart = null;
+    let currentTicker = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> 30=Oversolgt (kjøp), 70=Overkjøpt (salg). Tydelige hvite linjer markerer disse nivåene.",
-        volum: "<b>Volum %:</b> Dagens handelsvolum sammenlignet med 20-dg gjennomsnitt.",
-        rr: "<b>Risk/Reward:</b> Forholdet mellom potensiell oppside og nedside.",
-        trend: "<b>Trend:</b> Basert på MACD-momentum.",
+        rsi: "<b>RSI (14):</b> 30=Oversolgt, 70=Overkjøpt. De hvite linjene markerer faresonene.",
+        volum: "<b>Volum %:</b> Dagens volum mot 20-dg snitt.",
+        rr: "<b>Risk/Reward:</b> Oppside mot nedside.",
+        trend: "<b>Trend:</b> MACD-momentum.",
         sma: "<b>SMA:</b> Glidende snitt.",
-        ema: "<b>EMA:</b> Eksponentielt snitt som reagerer raskt.",
+        ema: "<b>EMA:</b> Eksponentielt snitt.",
         boll: "<b>Bollinger:</b> Volatilitetsbånd.",
-        support: "<b>Støtte/Motstand:</b> Lokale kursgulv og -tak."
+        support: "<b>Støtte/Motstand:</b> Tekniske gulv og tak."
     };
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
@@ -136,7 +153,7 @@
             const res = await fetch(DATA_URL);
             const data = await res.json();
             if (data && data.aksjer) {
-                stocks = data.aksjer;
+                stocks = data.aksjer.filter(s => s.Aksje && s.Historikk);
                 if (data.oppdatert) {
                     const tp = data.oppdatert.split(" ");
                     document.getElementById('ts-date').innerText = tp[0];
@@ -152,7 +169,7 @@
         const toast = document.getElementById('tooltipToast');
         toast.innerHTML = tooltips[key];
         toast.classList.add('active');
-        setTimeout(hideTip, 6000);
+        setTimeout(hideTip, 5000);
     }
     function hideTip() { document.getElementById('tooltipToast').classList.remove('active'); }
 
@@ -169,12 +186,16 @@
         render();
     }
 
+    function changeTime(days) {
+        updateChart(days, currentTicker);
+    }
+
     function openDetail(ticker) {
+        currentTicker = ticker;
         const s = stocks.find(x => x.Aksje === ticker);
         const index = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0];
-        const detail = document.getElementById('detailContent');
-        const inMine = myStocks.includes(ticker);
-        const inRadar = radarStocks.includes(ticker);
+        if(!s) return;
+        
         const gav = myGAVs[ticker] || "";
         const note = myNotes[ticker] || "";
         
@@ -192,24 +213,16 @@
 
         const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
-        detail.innerHTML = `
+        document.getElementById('detailHeaderInfo').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
                 <div style="font-size:14px; color:var(--secondary); font-weight:700;">${s.Navn || ""}</div>
                 <div style="font-size:26px; font-weight:800; margin-top:10px;">${s["Siste kurs"].toFixed(2)}</div>
                 ${profitHtml}
             </div>
-            <div class="time-row">
-                <div class="time-btn" id="t-7" onclick="updateChart(7, '${ticker}')">1U</div>
-                <div class="time-btn active" id="t-30" onclick="updateChart(30, '${ticker}')">1M</div>
-                <div class="time-btn" id="t-90" onclick="updateChart(90, '${ticker}')">3M</div>
-                <div class="time-btn" id="t-180" onclick="updateChart(180, '${ticker}')">6M</div>
-                <div class="time-btn" id="t-365" onclick="updateChart(365, '${ticker}')">1Å</div>
-            </div>
-            <div class="charts-wrapper">
-                <div class="chart-box price-height"><canvas id="priceChart"></canvas></div>
-                <div class="chart-box rsi-height"><canvas id="rsiChart"></canvas></div>
-            </div>
+        `;
+
+        document.getElementById('detailBodyContent').innerHTML = `
             <div class="info-grid">
                 <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${s.Volum_vs_Snitt.toFixed(0)}%</div></div>
@@ -237,11 +250,11 @@
             <div class="user-data-section">
                 <div class="user-data-title">Mine data</div>
                 <input type="number" class="gav-input" id="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
-                <textarea placeholder="Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
+                <textarea placeholder="Strategi & Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
-        setTimeout(() => updateChart(30, ticker), 50);
+        updateChart(30, ticker);
     }
 
     function updateChart(dager, ticker) {
@@ -251,21 +264,22 @@
         const labels = history.map(h => h.dato);
         
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        const activeBtn = document.getElementById('t-' + dager);
-        if(activeBtn) activeBtn.classList.add('active');
+        const btn = document.getElementById('t-' + dager);
+        if(btn) btn.classList.add('active');
 
         if (priceChart) priceChart.destroy();
         if (rsiChart) rsiChart.destroy();
 
-        // 1. Kursgraf
-        priceChart = new Chart(document.getElementById('priceChart'), {
+        // 1. PRICE CHART
+        const ctxPrice = document.getElementById('priceChart').getContext('2d');
+        priceChart = new Chart(ctxPrice, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     data: history.map(h => h.pris),
                     borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
-                    borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
+                    borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
                 }]
             },
             options: { 
@@ -278,43 +292,53 @@
             }
         });
 
-        // 2. RSI-graf
-        
-        rsiChart = new Chart(document.getElementById('rsiChart'), {
+        // 2. RSI CHART
+        const ctxRsi = document.getElementById('rsiChart').getContext('2d');
+        rsiChart = new Chart(ctxRsi, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     data: history.map(h => h.rsi || 50),
                     borderColor: '#0a84ff',
-                    borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
+                    borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
                 }]
             },
             options: { 
                 responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
+                plugins: { legend: { display: false } }, 
                 scales: { 
-                    x: { grid: { display: false }, ticks: { color: '#8e8e93', font: { size: 10 }, maxTicksLimit: 5 } },
+                    x: { grid: { display: false }, ticks: { color: '#8e8e93', autoSkip: true, maxTicksLimit: 5, font: { size: 10 } } }, 
                     y: { 
                         min: 0, max: 100,
                         grid: { 
-                            color: (context) => ([30, 70].includes(context.tick.value) ? '#ffffff' : '#2c2c2e'),
-                            lineWidth: (context) => ([30, 70].includes(context.tick.value) ? 2 : 0.5)
-                        },
+                            color: (c) => {
+                                if ([30, 70].includes(c.tick.value)) return '#ffffff'; // HVIT
+                                if ([0, 50, 100].includes(c.tick.value)) return '#444444'; // GRÅ
+                                return 'transparent';
+                            }, 
+                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 2 : 1) 
+                        }, 
                         ticks: { 
-                            color: (context) => ([30, 70].includes(context.tick.value) ? '#ffffff' : '#8e8e93'),
+                            color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#8e8e93'), 
                             stepSize: 10,
-                            callback: (val) => ([0, 30, 50, 70, 100].includes(val) ? val : ''),
-                            font: { size: 10, weight: (context) => ([30, 70].includes(context.tick.value) ? 'bold' : 'normal') }
-                        }
-                    }
-                }
+                            callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''), 
+                            font: { size: 10, weight: (c) => ([30, 70].includes(c.tick.value) ? 'bold' : 'normal') } 
+                        } 
+                    } 
+                } 
             }
         });
     }
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
+        const activeBtn = document.getElementById('btn-' + currentSort);
+        if(activeBtn) {
+            activeBtn.classList.add('active-sort');
+            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
+        }
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
