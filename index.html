@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StockScreener Pro v8.2</title>
+    <title>StockScreener Pro v8.3</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -43,7 +43,6 @@
         .mini-stat { display: flex; flex-direction: column; }
         .label { font-size: 9px; color: var(--secondary); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 700; }
-        .info-i { color: var(--blue); font-style: normal; font-size: 11px; margin-left: 2px; }
 
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; 
@@ -53,30 +52,22 @@
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
         
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
-        .chart-price-container { height: 180px; margin-bottom: 15px; }
-        .chart-rsi-container { height: 110px; border-top: 1px solid #2c2c2e; padding-top: 10px; }
+        .chart-box { position: relative; width: 100%; }
+        .price-height { height: 180px; margin-bottom: 25px; }
+        .rsi-height { height: 100px; }
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
-        
         .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .rel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; text-align: center; }
-
         .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
-        .active-mine { border-color: var(--orange); color: var(--orange); background: rgba(255,159,10,0.1); }
-        .active-radar { border-color: var(--blue); color: var(--blue); background: rgba(10,132,255,0.1); }
-
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
-
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
-        .user-data-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 15px; }
-        .gav-input { background: #2c2c2e; width: 100%; margin: 8px 0 15px 0; height: 45px; text-align: left; padding: 0 15px; color: white; border-radius: 8px; border: none; }
-
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white; 
             padding: 18px; border-radius: 14px; z-index: 3000; transition: bottom 0.4s ease; 
@@ -128,14 +119,14 @@
     let priceChart = null; let rsiChart = null;
 
     const tooltips = {
-        rsi: "<b>RSI (14):</b> Momentum-indikator. Under 30 er oversolgt (hvite linjer markerer 30/70), over 70 er overkjøpt.",
-        volum: "<b>Volum %:</b> Dagens handelsvolum sammenlignet med 20-dagers gjennomsnitt.",
-        rr: "<b>Risk/Reward:</b> Potensiell oppside mot potensiell nedside.",
-        trend: "<b>Trend:</b> Basert på MACD. Bull indikerer positivt momentum.",
-        sma: "<b>SMA:</b> Glidende snitt over tid.",
+        rsi: "<b>RSI (14):</b> 30=Oversolgt (kjøp), 70=Overkjøpt (salg). Tydelige hvite linjer markerer disse nivåene.",
+        volum: "<b>Volum %:</b> Dagens handelsvolum sammenlignet med 20-dg gjennomsnitt.",
+        rr: "<b>Risk/Reward:</b> Forholdet mellom potensiell oppside og nedside.",
+        trend: "<b>Trend:</b> Basert på MACD-momentum.",
+        sma: "<b>SMA:</b> Glidende snitt.",
         ema: "<b>EMA:</b> Eksponentielt snitt som reagerer raskt.",
-        boll: "<b>Bollinger:</b> Prisens volatilitetsbånd.",
-        support: "<b>Støtte:</b> Historiske prisnivåer aksjen ofte holder."
+        boll: "<b>Bollinger:</b> Volatilitetsbånd.",
+        support: "<b>Støtte/Motstand:</b> Lokale kursgulv og -tak."
     };
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
@@ -145,11 +136,11 @@
             const res = await fetch(DATA_URL);
             const data = await res.json();
             if (data && data.aksjer) {
-                stocks = data.aksjer.filter(s => s.Aksje && s.Historikk);
+                stocks = data.aksjer;
                 if (data.oppdatert) {
                     const tp = data.oppdatert.split(" ");
-                    document.getElementById('ts-date').innerText = tp[0] || "--";
-                    document.getElementById('ts-time').innerText = tp[1] || "--";
+                    document.getElementById('ts-date').innerText = tp[0];
+                    document.getElementById('ts-time').innerText = tp[1];
                 }
             }
             render();
@@ -181,7 +172,6 @@
     function openDetail(ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
         const index = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0];
-        if(!s) return;
         const detail = document.getElementById('detailContent');
         const inMine = myStocks.includes(ticker);
         const inRadar = radarStocks.includes(ticker);
@@ -217,8 +207,8 @@
                 <div class="time-btn" id="t-365" onclick="updateChart(365, '${ticker}')">1Å</div>
             </div>
             <div class="charts-wrapper">
-                <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
-                <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
+                <div class="chart-box price-height"><canvas id="priceChart"></canvas></div>
+                <div class="chart-box rsi-height"><canvas id="rsiChart"></canvas></div>
             </div>
             <div class="info-grid">
                 <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${s.RSI_14.toFixed(1)}</div></div>
@@ -251,11 +241,7 @@
             </div>
         `;
         document.getElementById('detailPage').style.display = 'block';
-        
-        // Garanterer at canvas er klare i DOM før vi tegner
-        setTimeout(() => {
-            updateChart(30, ticker);
-        }, 150);
+        setTimeout(() => updateChart(30, ticker), 50);
     }
 
     function updateChart(dager, ticker) {
@@ -265,57 +251,70 @@
         const labels = history.map(h => h.dato);
         
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        const btn = document.getElementById('t-' + dager);
-        if(btn) btn.classList.add('active');
+        const activeBtn = document.getElementById('t-' + dager);
+        if(activeBtn) activeBtn.classList.add('active');
 
-        if (priceChart) priceChart.destroy(); if (rsiChart) rsiChart.destroy();
+        if (priceChart) priceChart.destroy();
+        if (rsiChart) rsiChart.destroy();
 
-        const ctxPrice = document.getElementById('priceChart').getContext('2d');
-        priceChart = new Chart(ctxPrice, {
-            type: 'line', data: { labels: labels, datasets: [{
-                data: history.map(h => h.pris), borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
-            }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } } } }
+        // 1. Kursgraf
+        priceChart = new Chart(document.getElementById('priceChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: history.map(h => h.pris),
+                    borderColor: s.RS_dag >= 0 ? '#32d74b' : '#ff453a',
+                    borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { 
+                    x: { display: false }, 
+                    y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                }
+            }
         });
 
-        const ctxRsi = document.getElementById('rsiChart').getContext('2d');
-        rsiChart = new Chart(ctxRsi, {
-            type: 'line', data: { labels: labels, datasets: [{
-                data: history.map(h => h.rsi), borderColor: '#0a84ff', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
-            }]}, options: { 
+        // 2. RSI-graf
+        
+        rsiChart = new Chart(document.getElementById('rsiChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: history.map(h => h.rsi || 50),
+                    borderColor: '#0a84ff',
+                    borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
+                }]
+            },
+            options: { 
                 responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } }, 
+                plugins: { legend: { display: false } },
                 scales: { 
-                    x: { grid: { display: false }, ticks: { color: '#8e8e93', autoSkip: true, maxTicksLimit: 5, font: { size: 10 } } }, 
+                    x: { grid: { display: false }, ticks: { color: '#8e8e93', font: { size: 10 }, maxTicksLimit: 5 } },
                     y: { 
-                        min: 0, max: 100, 
+                        min: 0, max: 100,
                         grid: { 
-                            color: (c) => {
-                                if ([30, 70].includes(c.tick.value)) return '#ffffff'; // HVITE LINJER
-                                if ([0, 50, 100].includes(c.tick.value)) return '#444444'; // GRÅ LINJER
-                                return 'transparent';
-                            }, 
-                            lineWidth: (c) => ([30, 70].includes(c.tick.value) ? 2 : 1) 
-                        }, 
+                            color: (context) => ([30, 70].includes(context.tick.value) ? '#ffffff' : '#2c2c2e'),
+                            lineWidth: (context) => ([30, 70].includes(context.tick.value) ? 2 : 0.5)
+                        },
                         ticks: { 
-                            color: (c) => ([30, 70].includes(c.tick.value) ? '#ffffff' : '#8e8e93'), 
+                            color: (context) => ([30, 70].includes(context.tick.value) ? '#ffffff' : '#8e8e93'),
                             stepSize: 10,
-                            callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''), 
-                            font: { size: 10, weight: (c) => ([30, 70].includes(c.tick.value) ? 'bold' : 'normal') } 
-                        } 
-                    } 
-                } 
+                            callback: (val) => ([0, 30, 50, 70, 100].includes(val) ? val : ''),
+                            font: { size: 10, weight: (context) => ([30, 70].includes(context.tick.value) ? 'bold' : 'normal') }
+                        }
+                    }
+                }
             }
         });
     }
 
     function render() {
         const query = document.getElementById('search').value.toUpperCase();
-        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active-sort'));
-        const activeBtn = document.getElementById('btn-' + currentSort);
-        if(activeBtn) {
-            activeBtn.classList.add('active-sort');
-            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
-        }
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
