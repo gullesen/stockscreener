@@ -292,20 +292,48 @@
             }
         });
 
-        // 2. RSI CHART (FIX: scriptable font + tryggere tick-tilgang)
+        // 2. RSI CHART (med garanterte hjelpelinjer 30/70)
         const ctxRsi = document.getElementById('rsiChart').getContext('2d');
+
+        const rsiValues = history.map(h => (h.rsi ?? 50));
+        const line30 = new Array(history.length).fill(30);
+        const line70 = new Array(history.length).fill(70);
+
         rsiChart = new Chart(ctxRsi, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    data: history.map(h => (h.rsi ?? 50)),
-                    borderColor: '#0a84ff',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    fill: false,
-                    tension: 0.2
-                }]
+                datasets: [
+                    // RSI-linje
+                    {
+                        data: rsiValues,
+                        borderColor: '#0a84ff',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.2
+                    },
+                    // Hjelpelinje 70
+                    {
+                        data: line70,
+                        borderColor: '#ffffff',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0,
+                        borderDash: [6, 6]
+                    },
+                    // Hjelpelinje 30
+                    {
+                        data: line30,
+                        borderColor: '#ffffff',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0,
+                        borderDash: [6, 6]
+                    }
+                ]
             },
             options: { 
                 responsive: true,
@@ -325,25 +353,13 @@
                         min: 0, 
                         max: 100,
                         grid: { 
-                            color: (ctx) => {
-                                const v = ctx.tick?.value;
-                                if (v === 30 || v === 70) return '#ffffff';      // HVIT
-                                if (v === 0 || v === 50 || v === 100) return '#444444'; // GRÅ
-                                return 'transparent';
-                            }, 
-                            lineWidth: (ctx) => {
-                                const v = ctx.tick?.value;
-                                return (v === 30 || v === 70) ? 2 : 1;
-                            }
+                            color: '#2c2c2e',
+                            lineWidth: 1
                         }, 
                         ticks: { 
                             stepSize: 10,
-                            color: (ctx) => {
-                                const v = ctx.tick?.value;
-                                return (v === 30 || v === 70) ? '#ffffff' : '#8e8e93';
-                            },
+                            color: '#8e8e93',
                             callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''),
-                            // ✅ Her var feilen: weight kan ikke være en funksjon inni font-objektet.
                             font: (ctx) => {
                                 const v = ctx.tick?.value;
                                 return {
@@ -366,9 +382,11 @@
             activeBtn.classList.add('active-sort');
             activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
         }
+
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
+
         filtered.sort((a, b) => {
             let vA, vB;
             if(currentSort === 'rsi') { vA = a.RSI_14; vB = b.RSI_14; }
@@ -377,6 +395,7 @@
             else { vA = a.Aksje; vB = b.Aksje; }
             return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
+
         document.getElementById('list').innerHTML = filtered.map(s => {
             const gav = myGAVs[s.Aksje];
             let profitHtml = ""; 
@@ -384,6 +403,11 @@
                 const diff = ((s["Siste kurs"] - gav) / gav) * 100; 
                 profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`; 
             }
+
+            // ✅ RSI-fargekoding i listen
+            const rsiVal = (s.RSI_14 ?? 50);
+            const rsiColor = (rsiVal > 70) ? 'var(--red)' : (rsiVal < 30) ? 'var(--green)' : 'var(--text)';
+
             return `<div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
                     <div style="display:flex; flex-direction:column;">
@@ -393,7 +417,7 @@
                     <span class="price">${s["Siste kurs"].toFixed(2)}</span>
                 </div>
                 <div class="row-indicators">
-                    <div class="mini-stat"><span class="label">RSI</span><span class="val">${s.RSI_14.toFixed(0)}</span></div>
+                    <div class="mini-stat"><span class="label">RSI</span><span class="val" style="color:${rsiColor};">${rsiVal.toFixed(0)}</span></div>
                     <div class="mini-stat"><span class="label">VOL %</span><span class="val">${s.Volum_vs_Snitt.toFixed(0)}%</span></div>
                     <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend}</span></div>
                     <div class="mini-stat"><span class="label">R/R</span><span class="val">${s.Risk_Reward.toFixed(1)}</span></div>
@@ -430,6 +454,7 @@
         }
         render();
     }
+
     function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
     load();
 </script>
