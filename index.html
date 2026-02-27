@@ -11,6 +11,7 @@
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff; --secondary: #8e8e93;
             --green: #32d74b; --red: #ff453a; --blue: #0a84ff; --orange: #ff9f0a;
+            --yellow: #ffd60a;
         }
         body { 
             font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); 
@@ -36,7 +37,8 @@
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .ticker { font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 5px; }
-        .price { font-size: 20px; font-weight: 700; }
+        .price { font-size: 20px; font-weight: 700; display:flex; align-items:center; gap:8px; }
+        .signal-icon { font-size: 16px; line-height: 1; }
         .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); font-weight: 900; }
         .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px;}
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
@@ -56,8 +58,46 @@
         .chart-price-container { height: 180px; margin-bottom: 25px; }
         .chart-rsi-container { height: 110px; }
 
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
+
+        .signal-box {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 14px 15px;
+            margin-bottom: 18px;
+            border: 1px solid #2c2c2e;
+        }
+        .signal-top {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom: 6px;
+        }
+        .signal-title {
+            font-size: 10px;
+            color: var(--secondary);
+            font-weight: 900;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+        .signal-pill {
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 900;
+            border: 1px solid #3a3a3c;
+        }
+        .signal-reason {
+            font-size: 12px;
+            color: var(--secondary);
+            font-weight: 650;
+            line-height: 1.25;
+        }
+
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
         .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
@@ -148,6 +188,97 @@
 
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
 
+    // ----------------------------
+    // SIGNAL-LOGIKK (enkel første versjon)
+    // ----------------------------
+    function computeSignal(s) {
+        // Safe defaults
+        const rsi = Number.isFinite(s?.RSI_14) ? s.RSI_14 : 50;
+        const vol = Number.isFinite(s?.Volum_vs_Snitt) ? s.Volum_vs_Snitt : 100;
+        const rr  = Number.isFinite(s?.Risk_Reward) ? s.Risk_Reward : 0;
+        const macdTrend = (s?.MACD_Trend || '').toString();
+
+        // Bruk "forklaringspunkter" for transparens
+        const reasons = [];
+
+        // 1) Take profit / risiko når overkjøpt
+        if (rsi >= 72) {
+            reasons.push(`RSI ${rsi.toFixed(0)} er overkjøpt`);
+            if (macdTrend === 'Bear') reasons.push(`MACD-trend er Bear`);
+            return { 
+                label: 'SELG / TA GEVINST', 
+                icon: '🔴', 
+                color: 'var(--red)',
+                reason: reasons.join(' · ') || 'Overkjøpt / risiko for tilbakeslag'
+            };
+        }
+
+        // 2) Klar salg/unngå hvis momentum er negativt
+        if (macdTrend === 'Bear' && rsi < 48) {
+            reasons.push(`MACD-trend Bear`);
+            reasons.push(`RSI ${rsi.toFixed(0)} svakt`);
+            return { 
+                label: 'SELG / UNNGÅ', 
+                icon: '🔻', 
+                color: 'var(--red)',
+                reason: reasons.join(' · ')
+            };
+        }
+
+        // 3) Kjøp (trend + ikke overstrukket + volumstøtte + ok R/R)
+        const buyConditions = (
+            macdTrend === 'Bull' &&
+            rsi >= 40 && rsi <= 65 &&
+            vol >= 120 &&
+            rr >= 1.0
+        );
+
+        if (buyConditions) {
+            reasons.push(`MACD Bull`);
+            reasons.push(`RSI ${rsi.toFixed(0)} (ikke overkjøpt)`);
+            reasons.push(`Vol ${vol.toFixed(0)}%`);
+            reasons.push(`R/R ${rr.toFixed(2)}`);
+            return { 
+                label: 'KJØP', 
+                icon: '🟢', 
+                color: 'var(--green)',
+                reason: reasons.join(' · ')
+            };
+        }
+
+        // 4) Mulig watchlist-setup: Bull men enten lavt volum eller lav R/R eller RSI litt høy
+        if (macdTrend === 'Bull') {
+            if (rsi > 65) reasons.push(`RSI ${rsi.toFixed(0)} begynner å bli høy`);
+            if (vol < 120) reasons.push(`Volum under trigger (${vol.toFixed(0)}%)`);
+            if (rr < 1.0) reasons.push(`R/R lav (${rr.toFixed(2)})`);
+            return {
+                label: 'VENT / WATCH',
+                icon: '🟡',
+                color: 'var(--yellow)',
+                reason: reasons.join(' · ') || 'Bull trend, men mangler trigger'
+            };
+        }
+
+        // 5) Default HOLD
+        if (rsi < 30) reasons.push(`RSI ${rsi.toFixed(0)} oversolgt (kan sprette, men trend usikker)`);
+        return { 
+            label: 'HOLD', 
+            icon: '⚪️', 
+            color: 'var(--secondary)',
+            reason: reasons.join(' · ') || 'Ingen tydelig edge nå'
+        };
+    }
+
+    function signalIconForList(s) {
+        const sig = computeSignal(s);
+        // Litt “kompakt” ikon for listen
+        if (sig.label.startsWith('KJØP')) return { icon: '🟢', color: 'var(--green)' };
+        if (sig.label.startsWith('SELG')) return { icon: '🔴', color: 'var(--red)' };
+        if (sig.label.startsWith('VENT')) return { icon: '🟡', color: 'var(--yellow)' };
+        if (sig.label === 'HOLD') return { icon: '⚪️', color: 'var(--secondary)' };
+        return { icon: '⚪️', color: 'var(--secondary)' };
+    }
+
     async function load() {
         try {
             const res = await fetch(DATA_URL);
@@ -213,6 +344,8 @@
 
         const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
+        const sig = computeSignal(s);
+
         document.getElementById('detailHeaderInfo').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
@@ -229,6 +362,19 @@
                 <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">R/R <i class="info-i">ⓘ</i></div><div class="val">${s.Risk_Reward.toFixed(2)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
             </div>
+
+            <!-- ✅ SIGNAL (ny) -->
+            <div class="signal-box">
+                <div class="signal-top">
+                    <div class="signal-title">Signal</div>
+                    <div class="signal-pill" style="color:${sig.color};">
+                        <span>${sig.icon}</span>
+                        <span>${sig.label}</span>
+                    </div>
+                </div>
+                <div class="signal-reason">${sig.reason}</div>
+            </div>
+
             <div class="rel-strength-box">
                 <div class="label" style="margin-bottom:12px;">Relativ styrke vs OSEBX</div>
                 <div class="rel-grid">
@@ -404,9 +550,12 @@
                 profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`; 
             }
 
-            // ✅ RSI-fargekoding i listen
+            // RSI-fargekoding i listen
             const rsiVal = (s.RSI_14 ?? 50);
             const rsiColor = (rsiVal > 70) ? 'var(--red)' : (rsiVal < 30) ? 'var(--green)' : 'var(--text)';
+
+            // ✅ Signal-ikon til hovedlisten (mellom ticker og kurs)
+            const sigMini = signalIconForList(s);
 
             return `<div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
@@ -414,7 +563,10 @@
                         <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${profitHtml}</span>
                         <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
                     </div>
-                    <span class="price">${s["Siste kurs"].toFixed(2)}</span>
+                    <span class="price">
+                        <span class="signal-icon" style="color:${sigMini.color};">${sigMini.icon}</span>
+                        ${s["Siste kurs"].toFixed(2)}
+                    </span>
                 </div>
                 <div class="row-indicators">
                     <div class="mini-stat"><span class="label">RSI</span><span class="val" style="color:${rsiColor};">${rsiVal.toFixed(0)}</span></div>
