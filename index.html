@@ -13,8 +13,8 @@
             --green: #32d74b; --red: #ff453a; --blue: #0a84ff; --orange: #ff9f0a;
             --yellow: #ffd60a;
         }
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); 
+        body {
+            font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text);
             margin: 0; padding: env(safe-area-inset-top) 15px 120px 15px; -webkit-tap-highlight-color: transparent;
         }
         .sticky-header { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 100; }
@@ -24,8 +24,8 @@
         .update-label { font-size: 8px; color: var(--blue); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: block; }
         .update-time { font-size: 10px; color: var(--secondary); font-weight: 600; white-space: nowrap; }
 
-        input, .sort-btn, .filter-btn, textarea { 
-            width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--card); color: var(--text); 
+        input, .sort-btn, .filter-btn, textarea {
+            width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--card); color: var(--text);
             font-size: 14px; margin-bottom: 8px; box-sizing: border-box; outline: none;
         }
         .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -37,8 +37,11 @@
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
         .row-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .ticker { font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 5px; }
-        .price { font-size: 20px; font-weight: 700; display:flex; align-items:center; gap:8px; }
-        .signal-icon { font-size: 16px; line-height: 1; }
+        .price { font-size: 20px; font-weight: 700; display:flex; align-items:center; gap:10px; }
+
+        .triple-icons { display:inline-flex; gap:6px; align-items:center; }
+        .sig-dot { font-size: 16px; line-height: 1; filter: saturate(1.1); }
+
         .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); font-weight: 900; }
         .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px;}
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
@@ -48,12 +51,12 @@
         .info-i { color: var(--blue); font-style: normal; font-size: 11px; margin-left: 2px; }
 
         #detailPage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000;
             display: none; overflow-y: auto; padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
         }
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
-        
+
         .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
         .chart-price-container { height: 180px; margin-bottom: 25px; }
         .chart-rsi-container { height: 110px; }
@@ -61,6 +64,7 @@
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
 
+        /* 3-lags signalboks */
         .signal-box {
             background: var(--card);
             border-radius: 15px;
@@ -68,19 +72,19 @@
             margin-bottom: 18px;
             border: 1px solid #2c2c2e;
         }
-        .signal-top {
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            margin-bottom: 6px;
-        }
         .signal-title {
             font-size: 10px;
             color: var(--secondary);
             font-weight: 900;
             letter-spacing: 0.6px;
             text-transform: uppercase;
+            margin-bottom: 10px;
         }
+        .signal-rows { display:flex; flex-direction:column; gap:10px; }
+        .signal-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .signal-left { display:flex; flex-direction:column; gap:4px; flex:1; }
+        .signal-label { font-size: 12px; font-weight: 900; letter-spacing: 0.3px; }
+        .signal-reason { font-size: 12px; color: var(--secondary); font-weight: 650; line-height: 1.25; }
         .signal-pill {
             display:inline-flex;
             align-items:center;
@@ -90,12 +94,7 @@
             font-size: 12px;
             font-weight: 900;
             border: 1px solid #3a3a3c;
-        }
-        .signal-reason {
-            font-size: 12px;
-            color: var(--secondary);
-            font-weight: 650;
-            line-height: 1.25;
+            white-space: nowrap;
         }
 
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
@@ -109,8 +108,8 @@
         .time-btn.active { background: #3a3a3c; color: white; }
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         #tooltipToast {
-            position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white; 
-            padding: 18px; border-radius: 14px; z-index: 3000; transition: bottom 0.4s ease; 
+            position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white;
+            padding: 18px; border-radius: 14px; z-index: 3000; transition: bottom 0.4s ease;
             border-left: 5px solid var(--blue); box-shadow: 0 10px 30px rgba(0,0,0,0.6); font-size: 14px;
         }
         #tooltipToast.active { bottom: 40px; }
@@ -145,7 +144,7 @@
 
 <div id="detailPage">
     <div class="detail-nav"><div class="back-btn" onclick="closeDetail()">← Tilbake</div></div>
-    
+
     <div id="detailHeaderInfo"></div>
 
     <div class="time-row">
@@ -170,8 +169,8 @@
     let stocks = []; let currentSort = 'ticker'; let isAscending = true; let currentFilter = 'all';
     let myStocks = JSON.parse(localStorage.getItem('myStocks')) || [];
     let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
-    let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {}; 
-    let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
+    let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {};
+    let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {};
     let priceChart = null; let rsiChart = null;
     let currentTicker = null;
 
@@ -189,94 +188,243 @@
     const DATA_URL = "https://gist.githubusercontent.com/gullesen/28b92c3d60b920d4ae061dd73d6a5570/raw/aksjer.json?v=" + new Date().getTime();
 
     // ----------------------------
-    // SIGNAL-LOGIKK (enkel første versjon)
+    // 3-LAGS SIGNALER: TREND / SETUP / RISIKO
     // ----------------------------
-    function computeSignal(s) {
-        // Safe defaults
-        const rsi = Number.isFinite(s?.RSI_14) ? s.RSI_14 : 50;
-        const vol = Number.isFinite(s?.Volum_vs_Snitt) ? s.Volum_vs_Snitt : 100;
-        const rr  = Number.isFinite(s?.Risk_Reward) ? s.Risk_Reward : 0;
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function safeNum(v, fallback) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
+    function pctDiff(a, b) {
+        // (a-b)/b
+        if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) return 999;
+        return (a - b) / b;
+    }
+
+    function getHistory(s, n) {
+        if (!s?.Historikk || !Array.isArray(s.Historikk)) return [];
+        return s.Historikk.slice(-n);
+    }
+
+    function getLastPrice(s) {
+        // Siste kurs er best, men hvis mangler, bruk siste historikk-pris
+        const sc = safeNum(s?.["Siste kurs"], NaN);
+        if (Number.isFinite(sc)) return sc;
+        const h = getHistory(s, 1);
+        return h.length ? safeNum(h[0].pris, NaN) : NaN;
+    }
+
+    function trendSignal(s) {
+        const price = getLastPrice(s);
+        const sma50 = safeNum(s?.SMA_50, NaN);
+        const sma200 = safeNum(s?.SMA_200, NaN);
         const macdTrend = (s?.MACD_Trend || '').toString();
 
-        // Bruk "forklaringspunkter" for transparens
-        const reasons = [];
+        // Regime
+        const above200 = Number.isFinite(price) && Number.isFinite(sma200) ? price > sma200 : false;
+        const below200 = Number.isFinite(price) && Number.isFinite(sma200) ? price < sma200 : false;
+        const crossUp  = Number.isFinite(sma50) && Number.isFinite(sma200) ? sma50 > sma200 : false;
+        const crossDn  = Number.isFinite(sma50) && Number.isFinite(sma200) ? sma50 < sma200 : false;
 
-        // 1) Take profit / risiko når overkjøpt
-        if (rsi >= 72) {
-            reasons.push(`RSI ${rsi.toFixed(0)} er overkjøpt`);
-            if (macdTrend === 'Bear') reasons.push(`MACD-trend er Bear`);
-            return { 
-                label: 'SELG / TA GEVINST', 
-                icon: '🔴', 
-                color: 'var(--red)',
-                reason: reasons.join(' · ') || 'Overkjøpt / risiko for tilbakeslag'
-            };
+        // Poeng for robusthet
+        let bullPts = 0, bearPts = 0;
+        if (above200) bullPts++; if (crossUp) bullPts++;
+        if (macdTrend === 'Bull') bullPts++;
+
+        if (below200) bearPts++; if (crossDn) bearPts++;
+        if (macdTrend === 'Bear') bearPts++;
+
+        if (bullPts >= 2 && bullPts > bearPts) {
+            return { label: 'OPPTREND', icon: '🟢', color: 'var(--green)', reason: `Pris over SMA200 · SMA50>SMA200 · MACD Bull`.replace(' · SMA50>SMA200', crossUp ? ' · SMA50>SMA200' : '') };
+        }
+        if (bearPts >= 2 && bearPts > bullPts) {
+            return { label: 'NEDTREND', icon: '🔴', color: 'var(--red)', reason: `Pris under SMA200 · SMA50<SMA200 · MACD Bear`.replace(' · SMA50<SMA200', crossDn ? ' · SMA50<SMA200' : '') };
+        }
+        return { label: 'RANGE / UKLART', icon: '🟡', color: 'var(--yellow)', reason: `Blandet bilde (SMA/MACD)`.trim() };
+    }
+
+    // Prioritet: Support bounce -> Pullback i opptrend -> Breakout -> Ingen setup
+    function setupSignal(s, trend) {
+        const price = getLastPrice(s);
+        const support = safeNum(s?.Stotte_50, NaN);
+        const resist  = safeNum(s?.Motstand_50, NaN);
+        const vol = safeNum(s?.Volum_vs_Snitt, 100);
+        const rr  = safeNum(s?.Risk_Reward, 0);
+        const rsi = safeNum(s?.RSI_14, 50);
+
+        const h = getHistory(s, 12); // ca ~2-3 uker i din sampling (avhengig av hvor mange punkter du lagrer)
+        const prices = h.map(x => safeNum(x.pris, NaN)).filter(Number.isFinite);
+        const rsis   = h.map(x => safeNum(x.rsi, NaN)).filter(Number.isFinite);
+
+        // --- A) SUPPORT BOUNCE (høyeste prioritet)
+        if (Number.isFinite(price) && Number.isFinite(support) && prices.length >= 3) {
+            const lookback = Math.min(prices.length, 8);
+            const recent = prices.slice(-lookback);
+            const recentMin = Math.min(...recent);
+
+            // nær støtte: min siste N innen +2% over støtte
+            const nearSupport = recentMin <= support * 1.02;
+
+            // "bounce" bekreftelse: siste pris > forrige pris (evt 2 oppdager) og/eller RSI stiger
+            const last = recent[recent.length - 1];
+            const prev = recent[recent.length - 2];
+            const prev2 = recent.length >= 3 ? recent[recent.length - 3] : prev;
+
+            const priceUp1 = Number.isFinite(last) && Number.isFinite(prev) ? (last > prev) : false;
+            const priceUp2 = Number.isFinite(last) && Number.isFinite(prev) && Number.isFinite(prev2) ? (last > prev && prev > prev2) : false;
+
+            let rsiUp = false;
+            if (rsis.length >= 2) {
+                const rLast = rsis[rsis.length - 1];
+                const rPrev = rsis[rsis.length - 2];
+                rsiUp = Number.isFinite(rLast) && Number.isFinite(rPrev) ? (rLast > rPrev) : false;
+            }
+
+            const bounce = nearSupport && (priceUp1 || priceUp2 || rsiUp);
+
+            if (bounce) {
+                const distPct = pctDiff(price, support) * 100;
+                const vtxt = Number.isFinite(vol) ? `${vol.toFixed(0)}%` : '–';
+                const rrtxt = Number.isFinite(rr) ? rr.toFixed(2) : '–';
+                return {
+                    label: 'SUPPORT BOUNCE',
+                    icon: '🟢',
+                    color: 'var(--green)',
+                    reason: `Testet støtte (≤+2%) · Vending bekreftet · Vol ${vtxt} · R/R ${rrtxt}`
+                };
+            }
         }
 
-        // 2) Klar salg/unngå hvis momentum er negativt
-        if (macdTrend === 'Bear' && rsi < 48) {
-            reasons.push(`MACD-trend Bear`);
-            reasons.push(`RSI ${rsi.toFixed(0)} svakt`);
-            return { 
-                label: 'SELG / UNNGÅ', 
-                icon: '🔻', 
-                color: 'var(--red)',
-                reason: reasons.join(' · ')
-            };
+        // --- B) PULLBACK I OPPTREND (hybrid-klassiker)
+        const ema20 = safeNum(s?.EMA_20, NaN);
+        const sma50 = safeNum(s?.SMA_50, NaN);
+
+        if (trend.label === 'OPPTREND' && Number.isFinite(price)) {
+            // nær EMA20 eller SMA50 (innen 0-2%)
+            const nearEma20 = Number.isFinite(ema20) ? Math.abs(pctDiff(price, ema20)) <= 0.02 : false;
+            const nearSma50 = Number.isFinite(sma50) ? Math.abs(pctDiff(price, sma50)) <= 0.02 : false;
+
+            // ikke overkjøpt
+            const okRsi = rsi <= 68;
+
+            if ((nearEma20 || nearSma50) && okRsi) {
+                const targetRef = nearEma20 ? 'EMA20' : 'SMA50';
+                return {
+                    label: 'PULLBACK (TREND)',
+                    icon: '🟡',
+                    color: 'var(--yellow)',
+                    reason: `Opptrend · Pullback nær ${targetRef} · RSI ${rsi.toFixed(0)}`
+                };
+            }
         }
 
-        // 3) Kjøp (trend + ikke overstrukket + volumstøtte + ok R/R)
-        const buyConditions = (
-            macdTrend === 'Bull' &&
-            rsi >= 40 && rsi <= 65 &&
-            vol >= 120 &&
-            rr >= 1.0
-        );
-
-        if (buyConditions) {
-            reasons.push(`MACD Bull`);
-            reasons.push(`RSI ${rsi.toFixed(0)} (ikke overkjøpt)`);
-            reasons.push(`Vol ${vol.toFixed(0)}%`);
-            reasons.push(`R/R ${rr.toFixed(2)}`);
-            return { 
-                label: 'KJØP', 
-                icon: '🟢', 
-                color: 'var(--green)',
-                reason: reasons.join(' · ')
-            };
+        // --- C) BREAKOUT / MOMENTUM
+        if (Number.isFinite(price) && Number.isFinite(resist)) {
+            // litt slakk: breakout hvis pris >= motstand * 0.998
+            const breakout = price >= resist * 0.998 && vol >= 120;
+            if (breakout) {
+                return {
+                    label: 'BREAKOUT',
+                    icon: '🟡',
+                    color: 'var(--yellow)',
+                    reason: `Brudd motstand · Vol ${vol.toFixed(0)}%`
+                };
+            }
         }
 
-        // 4) Mulig watchlist-setup: Bull men enten lavt volum eller lav R/R eller RSI litt høy
-        if (macdTrend === 'Bull') {
-            if (rsi > 65) reasons.push(`RSI ${rsi.toFixed(0)} begynner å bli høy`);
-            if (vol < 120) reasons.push(`Volum under trigger (${vol.toFixed(0)}%)`);
-            if (rr < 1.0) reasons.push(`R/R lav (${rr.toFixed(2)})`);
-            return {
-                label: 'VENT / WATCH',
-                icon: '🟡',
-                color: 'var(--yellow)',
-                reason: reasons.join(' · ') || 'Bull trend, men mangler trigger'
-            };
-        }
-
-        // 5) Default HOLD
-        if (rsi < 30) reasons.push(`RSI ${rsi.toFixed(0)} oversolgt (kan sprette, men trend usikker)`);
-        return { 
-            label: 'HOLD', 
-            icon: '⚪️', 
+        return {
+            label: 'INGEN SETUP',
+            icon: '⚪️',
             color: 'var(--secondary)',
-            reason: reasons.join(' · ') || 'Ingen tydelig edge nå'
+            reason: `Ingen tydelig støtte-bounce / pullback / breakout nå`
         };
     }
 
-    function signalIconForList(s) {
-        const sig = computeSignal(s);
-        // Litt “kompakt” ikon for listen
-        if (sig.label.startsWith('KJØP')) return { icon: '🟢', color: 'var(--green)' };
-        if (sig.label.startsWith('SELG')) return { icon: '🔴', color: 'var(--red)' };
-        if (sig.label.startsWith('VENT')) return { icon: '🟡', color: 'var(--yellow)' };
-        if (sig.label === 'HOLD') return { icon: '⚪️', color: 'var(--secondary)' };
-        return { icon: '⚪️', color: 'var(--secondary)' };
+    function riskSignal(s, trend, setup) {
+        const price = getLastPrice(s);
+        const rsi = safeNum(s?.RSI_14, 50);
+        const rr  = safeNum(s?.Risk_Reward, 0);
+        const vol = safeNum(s?.Volum_vs_Snitt, 100);
+        const upper = safeNum(s?.Ovre_Bollinger, NaN);
+        const lower = safeNum(s?.Nedre_Bollinger, NaN);
+
+        const reasons = [];
+
+        // Overkjøpt / overstretched
+        if (rsi >= 75) reasons.push(`RSI ${rsi.toFixed(0)} svært høy`);
+        else if (rsi >= 70) reasons.push(`RSI ${rsi.toFixed(0)} overkjøpt`);
+
+        if (Number.isFinite(price) && Number.isFinite(upper)) {
+            const nearUpper = pctDiff(upper, price) <= 0.01; // pris innen 1% av øvre bånd (upper - price)/price
+            if (nearUpper) reasons.push(`Nær øvre Bollinger`);
+        }
+
+        // Lav R/R
+        if (rr > 0 && rr < 1.0) reasons.push(`Lav R/R (${rr.toFixed(2)})`);
+
+        // Svakt volum (særlig hvis du forventer trigger)
+        if (vol < 80) reasons.push(`Svak volumstøtte (${vol.toFixed(0)}%)`);
+
+        // Oversolgt: risiko for "fallende kniv" hvis nedtrend (advarsel), ellers kan det være mulighet (men fortsatt risiko)
+        if (rsi <= 25) reasons.push(`RSI ${rsi.toFixed(0)} ekstremt lav`);
+
+        // Rangér risiko
+        // Høy risiko hvis overkjøpt+overstretched eller nedtrend + ingen setup, osv.
+        let level = 'LAV';
+        let icon = '🟢';
+        let color = 'var(--green)';
+
+        const inDowntrend = trend.label === 'NEDTREND';
+        const inUptrend = trend.label === 'OPPTREND';
+
+        const highRisk = (
+            (rsi >= 70 && (Number.isFinite(price) && Number.isFinite(upper) && pctDiff(upper, price) <= 0.015)) ||
+            (inDowntrend && setup.label === 'INGEN SETUP') ||
+            (rsi >= 75)
+        );
+
+        const mediumRisk = (
+            (reasons.length >= 1) ||
+            (inDowntrend && setup.label !== 'SUPPORT BOUNCE') ||
+            (!inUptrend && rr > 0 && rr < 1.2)
+        );
+
+        if (highRisk) {
+            level = 'HØY';
+            icon = '🔴';
+            color = 'var(--red)';
+        } else if (mediumRisk) {
+            level = 'MIDDELS';
+            icon = '🟡';
+            color = 'var(--yellow)';
+        }
+
+        return {
+            label: level,
+            icon,
+            color,
+            reason: reasons.length ? reasons.join(' · ') : `Ingen klare røde flagg`
+        };
+    }
+
+    function computeThreeSignals(s) {
+        const trend = trendSignal(s);
+        const setup = setupSignal(s, trend);
+        const risk  = riskSignal(s, trend, setup);
+        return { trend, setup, risk };
+    }
+
+    // Mini-ikoner til liste (3-lag)
+    function miniDot(sigObj) {
+        // Map til faste “dots”
+        if (sigObj.icon === '🔴') return { icon:'🔴', color:'var(--red)' };
+        if (sigObj.icon === '🟢') return { icon:'🟢', color:'var(--green)' };
+        if (sigObj.icon === '🟡') return { icon:'🟡', color:'var(--yellow)' };
+        // fallback
+        return { icon:'⚪️', color:'var(--secondary)' };
     }
 
     async function load() {
@@ -292,7 +440,9 @@
                 }
             }
             render();
-        } catch (e) { document.getElementById('list').innerHTML = "Feil ved henting."; }
+        } catch (e) {
+            document.getElementById('list').innerHTML = "Feil ved henting.";
+        }
     }
 
     function showTip(e, key) {
@@ -326,10 +476,10 @@
         const s = stocks.find(x => x.Aksje === ticker);
         const index = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0];
         if(!s) return;
-        
+
         const gav = myGAVs[ticker] || "";
         const note = myNotes[ticker] || "";
-        
+
         let profitHtml = "";
         if (gav) {
             const diff = ((s["Siste kurs"] - gav) / gav) * 100;
@@ -344,7 +494,7 @@
 
         const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
-        const sig = computeSignal(s);
+        const sigs = computeThreeSignals(s);
 
         document.getElementById('detailHeaderInfo').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
@@ -363,16 +513,42 @@
                 <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
             </div>
 
-            <!-- ✅ SIGNAL (ny) -->
+            <!-- ✅ 3-lags signaler -->
             <div class="signal-box">
-                <div class="signal-top">
-                    <div class="signal-title">Signal</div>
-                    <div class="signal-pill" style="color:${sig.color};">
-                        <span>${sig.icon}</span>
-                        <span>${sig.label}</span>
+                <div class="signal-title">Signaler</div>
+                <div class="signal-rows">
+
+                    <div class="signal-row">
+                        <div class="signal-left">
+                            <div class="signal-label">TREND</div>
+                            <div class="signal-reason">${sigs.trend.reason}</div>
+                        </div>
+                        <div class="signal-pill" style="color:${sigs.trend.color};">
+                            <span>${sigs.trend.icon}</span><span>${sigs.trend.label}</span>
+                        </div>
                     </div>
+
+                    <div class="signal-row">
+                        <div class="signal-left">
+                            <div class="signal-label">SETUP</div>
+                            <div class="signal-reason">${sigs.setup.reason}</div>
+                        </div>
+                        <div class="signal-pill" style="color:${sigs.setup.color};">
+                            <span>${sigs.setup.icon}</span><span>${sigs.setup.label}</span>
+                        </div>
+                    </div>
+
+                    <div class="signal-row">
+                        <div class="signal-left">
+                            <div class="signal-label">RISIKO</div>
+                            <div class="signal-reason">${sigs.risk.reason}</div>
+                        </div>
+                        <div class="signal-pill" style="color:${sigs.risk.color};">
+                            <span>${sigs.risk.icon}</span><span>${sigs.risk.label}</span>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="signal-reason">${sig.reason}</div>
             </div>
 
             <div class="rel-strength-box">
@@ -385,20 +561,24 @@
                     }).join('')}
                 </div>
             </div>
+
             <div class="tech-list">
                 <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${s.SMA_50.toFixed(1)} / ${s.SMA_200.toFixed(1)}</b></div>
                 <div class="tech-row" style="border:none;" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${s.EMA_9.toFixed(1)} / ${s.EMA_20.toFixed(1)} / ${s.EMA_200.toFixed(1)}</b></div>
             </div>
+
             <div class="list-actions">
                 <button class="action-btn ${myStocks.includes(ticker)?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${myStocks.includes(ticker)?'✓ Mine':' + Mine'}</button>
                 <button class="action-btn ${radarStocks.includes(ticker)?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${radarStocks.includes(ticker)?'✓ Radar':' + Radar'}</button>
             </div>
+
             <div class="user-data-section">
                 <div class="user-data-title">Mine data</div>
                 <input type="number" class="gav-input" id="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
                 <textarea placeholder="Strategi & Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
             </div>
         `;
+
         document.getElementById('detailPage').style.display = 'block';
         updateChart(30, ticker);
     }
@@ -408,7 +588,7 @@
         if(!s || !s.Historikk) return;
         const history = s.Historikk.slice(-dager);
         const labels = history.map(h => h.dato);
-        
+
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('t-' + dager);
         if(btn) btn.classList.add('active');
@@ -428,17 +608,17 @@
                     borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
                 }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { 
-                    x: { display: false }, 
+                scales: {
+                    x: { display: false },
                     y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
                 }
             }
         });
 
-        // 2. RSI CHART (med garanterte hjelpelinjer 30/70)
+        // 2. RSI CHART (med hjelpelinjer 30/70)
         const ctxRsi = document.getElementById('rsiChart').getContext('2d');
 
         const rsiValues = history.map(h => (h.rsi ?? 50));
@@ -450,7 +630,6 @@
             data: {
                 labels: labels,
                 datasets: [
-                    // RSI-linje
                     {
                         data: rsiValues,
                         borderColor: '#0a84ff',
@@ -459,7 +638,6 @@
                         fill: false,
                         tension: 0.2
                     },
-                    // Hjelpelinje 70
                     {
                         data: line70,
                         borderColor: '#ffffff',
@@ -469,7 +647,6 @@
                         tension: 0,
                         borderDash: [6, 6]
                     },
-                    // Hjelpelinje 30
                     {
                         data: line30,
                         borderColor: '#ffffff',
@@ -481,12 +658,12 @@
                     }
                 ]
             },
-            options: { 
+            options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { 
-                    x: { 
+                scales: {
+                    x: {
                         grid: { display: false },
                         ticks: {
                             color: '#8e8e93',
@@ -494,15 +671,15 @@
                             maxTicksLimit: 5,
                             font: { size: 10 }
                         }
-                    }, 
-                    y: { 
-                        min: 0, 
+                    },
+                    y: {
+                        min: 0,
                         max: 100,
-                        grid: { 
+                        grid: {
                             color: '#2c2c2e',
                             lineWidth: 1
-                        }, 
-                        ticks: { 
+                        },
+                        ticks: {
                             stepSize: 10,
                             color: '#8e8e93',
                             callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''),
@@ -513,9 +690,9 @@
                                     weight: (v === 30 || v === 70) ? 'bold' : 'normal'
                                 };
                             }
-                        } 
-                    } 
-                } 
+                        }
+                    }
+                }
             }
         });
     }
@@ -544,18 +721,21 @@
 
         document.getElementById('list').innerHTML = filtered.map(s => {
             const gav = myGAVs[s.Aksje];
-            let profitHtml = ""; 
-            if (gav) { 
-                const diff = ((s["Siste kurs"] - gav) / gav) * 100; 
-                profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`; 
+            let profitHtml = "";
+            if (gav) {
+                const diff = ((s["Siste kurs"] - gav) / gav) * 100;
+                profitHtml = `<span class="profit-badge" style="background:${diff >= 0 ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</span>`;
             }
 
             // RSI-fargekoding i listen
             const rsiVal = (s.RSI_14 ?? 50);
             const rsiColor = (rsiVal > 70) ? 'var(--red)' : (rsiVal < 30) ? 'var(--green)' : 'var(--text)';
 
-            // ✅ Signal-ikon til hovedlisten (mellom ticker og kurs)
-            const sigMini = signalIconForList(s);
+            // ✅ 3-lags mini-ikoner i listen (mellom ticker-blokk og kurs)
+            const sigs = computeThreeSignals(s);
+            const tDot = miniDot(sigs.trend);
+            const sDot = miniDot(sigs.setup);
+            const rDot = miniDot(sigs.risk);
 
             return `<div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
@@ -564,7 +744,11 @@
                         <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
                     </div>
                     <span class="price">
-                        <span class="signal-icon" style="color:${sigMini.color};">${sigMini.icon}</span>
+                        <span class="triple-icons" title="Trend / Setup / Risiko">
+                            <span class="sig-dot" style="color:${tDot.color};">${tDot.icon}</span>
+                            <span class="sig-dot" style="color:${sDot.color};">${sDot.icon}</span>
+                            <span class="sig-dot" style="color:${rDot.color};">${rDot.icon}</span>
+                        </span>
                         ${s["Siste kurs"].toFixed(2)}
                     </span>
                 </div>
@@ -579,30 +763,30 @@
     }
 
     function toggleList(ticker, type) {
-        let list = type === 'mine' ? myStocks : radarStocks; 
+        let list = type === 'mine' ? myStocks : radarStocks;
         let other = type === 'mine' ? radarStocks : myStocks;
         const idx = list.indexOf(ticker);
-        if (idx > -1) list.splice(idx, 1); 
-        else { 
-            list.push(ticker); 
-            const oIdx = other.indexOf(ticker); 
-            if(oIdx > -1) other.splice(oIdx, 1); 
+        if (idx > -1) list.splice(idx, 1);
+        else {
+            list.push(ticker);
+            const oIdx = other.indexOf(ticker);
+            if(oIdx > -1) other.splice(oIdx, 1);
         }
-        localStorage.setItem('myStocks', JSON.stringify(myStocks)); 
+        localStorage.setItem('myStocks', JSON.stringify(myStocks));
         localStorage.setItem('radarStocks', JSON.stringify(radarStocks));
-        openDetail(ticker); 
+        openDetail(ticker);
         render();
     }
 
     function saveData(ticker, field, val) {
-        if (field === 'gav') { 
-            if (!val || val == 0) delete myGAVs[ticker]; 
-            else myGAVs[ticker] = parseFloat(val); 
-            localStorage.setItem('myGAVs', JSON.stringify(myGAVs)); 
-        } else { 
-            if (!val) delete myNotes[ticker]; 
-            else myNotes[ticker] = val; 
-            localStorage.setItem('myNotes', JSON.stringify(myNotes)); 
+        if (field === 'gav') {
+            if (!val || val == 0) delete myGAVs[ticker];
+            else myGAVs[ticker] = parseFloat(val);
+            localStorage.setItem('myGAVs', JSON.stringify(myGAVs));
+        } else {
+            if (!val) delete myNotes[ticker];
+            else myNotes[ticker] = val;
+            localStorage.setItem('myNotes', JSON.stringify(myNotes));
         }
         render();
     }
