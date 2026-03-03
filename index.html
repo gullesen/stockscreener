@@ -585,64 +585,120 @@
     function updateChart(dager, ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
         if(!s || !s.Historikk) return;
-
+    
         const history = s.Historikk.slice(-dager);
-
+    
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('t-' + dager);
         if(btn) btn.classList.add('active');
-
+    
         if (priceChart) priceChart.destroy();
         if (rsiChart) rsiChart.destroy();
-
-        // ---- 1) CANDLESTICK CHART ----
-        const ctxPrice = document.getElementById('priceChart').getContext('2d');
-
-        // Map til financial-format: {x, o, h, l, c}
-        const ohlc = history.map(h => ({
-            x: h.dato,
-            o: safeNum(h.open, NaN),
-            h: safeNum(h.high, NaN),
-            l: safeNum(h.low, NaN),
-            c: safeNum(h.close, NaN)
-        })).filter(b => Number.isFinite(b.o) && Number.isFinite(b.h) && Number.isFinite(b.l) && Number.isFinite(b.c));
-
-        // Hvis financial-plugin ikke lastet, får du samme gamle feilen. Vi håndterer det pent.
+    
+        const toast = document.getElementById('tooltipToast');
+    
+        // -------- 1) PRICE: Candlestick (med fallback) --------
+        const ctxPrice = document.getElementById('priceChart')?.getContext('2d');
+        if (!ctxPrice) return;
+    
+        const labels = history.map(h => h.dato);
+    
+        // Bygg OHLC uten å filtrere bort alt (men dropp rader som mangler close)
+        const ohlc = history
+            .map(h => ({
+                x: h.dato,
+                o: Number(h.open),
+                h: Number(h.high),
+                l: Number(h.low),
+                c: Number(h.close)
+            }))
+            .filter(b => Number.isFinite(b.c)); // minimum: må ha close
+    
+        const closes = history.map(h => {
+            const c = Number(h.close);
+            return Number.isFinite(c) ? c : null;
+        });
+    
+        // Hvis vi ikke har nok OHLC for candles -> fallback til line
+        const canCandle = (ohlc.length >= 5);
+    
         try {
-            priceChart = new Chart(ctxPrice, {
-                type: 'candlestick',
-                data: {
-                    datasets: [{
-                        label: ticker,
-                        data: ohlc
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            grid: { color: '#2c2c2e' },
-                            ticks: { color: '#8e8e93', font: { size: 10 } }
+            if (canCandle) {
+                priceChart = new Chart(ctxPrice, {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [{
+                            label: ticker,
+                            data: ohlc,
+    
+                            // ✅ sørg for synlige farger på mørk bakgrunn
+                            color: {
+                                up: '#32d74b',
+                                down: '#ff453a',
+                                unchanged: '#8e8e93'
+                            },
+                            borderColor: {
+                                up: '#32d74b',
+                                down: '#ff453a',
+                                unchanged: '#8e8e93'
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: {
+                                grid: { color: '#2c2c2e' },
+                                ticks: { color: '#8e8e93', font: { size: 10 } }
+                            }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                // Fallback line-chart
+                priceChart = new Chart(ctxPrice, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: closes,
+                            borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.15
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                        }
+                    }
+                });
+    
+                toast.innerHTML = `<b>Viser linjechart:</b> Mangler nok OHLC-punkter for candlestick (${ohlc.length}).`;
+                toast.classList.add('active');
+                setTimeout(hideTip, 4500);
+            }
         } catch (e) {
-            // Fallback: vis line-chart på close (så appen aldri dør)
-            const labels = history.map(h => h.dato);
-            const closes = history.map(h => safeNum(h.close, NaN)).filter(Number.isFinite);
-
+            // Hvis plugin ikke lastet / annen feil -> fallback line-chart + feilmelding
             priceChart = new Chart(ctxPrice, {
                 type: 'line',
                 data: {
                     labels,
                     datasets: [{
-                        data: history.map(h => safeNum(h.close, NaN)),
+                        data: closes,
                         borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
-                        borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.15
                     }]
                 },
                 options: {
@@ -654,26 +710,28 @@
                     }
                 }
             });
-
-            // Og gi tydelig toast om hvorfor candles ikke lastet:
-            const toast = document.getElementById('tooltipToast');
-            toast.innerHTML = `<b>Candlestick ikke tilgjengelig:</b> financial-plugin ble ikke lastet. Sjekk at chartjs-chart-financial lastes fra CDN.`;
+    
+            toast.innerHTML = `<b>Candlestick-feil:</b> ${e?.message || e}.<br><span style="color:var(--secondary);font-size:12px;">Sjekk at chartjs-chart-financial lastes fra CDN.</span>`;
             toast.classList.add('active');
-            setTimeout(hideTip, 6000);
+            setTimeout(hideTip, 6500);
         }
-
-        // ---- 2) RSI CHART (med hjelpelinjer 30/70) ----
-        const ctxRsi = document.getElementById('rsiChart').getContext('2d');
-        const labels = history.map(h => h.dato);
-
-        const rsiValues = history.map(h => safeNum(h.rsi, 50));
+    
+        // -------- 2) RSI chart --------
+        const ctxRsi = document.getElementById('rsiChart')?.getContext('2d');
+        if (!ctxRsi) return;
+    
+        const rsiValues = history.map(h => {
+            const r = Number(h.rsi);
+            return Number.isFinite(r) ? r : 50;
+        });
+    
         const line30 = new Array(history.length).fill(30);
         const line70 = new Array(history.length).fill(70);
-
+    
         rsiChart = new Chart(ctxRsi, {
             type: 'line',
             data: {
-                labels: labels,
+                labels,
                 datasets: [
                     {
                         data: rsiValues,
