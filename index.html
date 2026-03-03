@@ -199,6 +199,16 @@
     function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
     function safeNum(v, fallback) {
+        if (Number.isFinite(v)) return v;
+        if (typeof v === 'string') {
+            const normalized = v
+                .trim()
+                .replace(/\s/g, '')
+                .replace('%', '')
+                .replace(',', '.');
+            const n = Number(normalized);
+            return Number.isFinite(n) ? n : fallback;
+        }
         const n = Number(v);
         return Number.isFinite(n) ? n : fallback;
     }
@@ -586,7 +596,34 @@
         const s = stocks.find(x => x.Aksje === ticker);
         if(!s || !s.Historikk) return;
 
+        // Hvis Chart.js ikke er lastet (f.eks. nettverks-/CDN-problem),
+        // unngå hard krasj og vis tydelig feilmelding.
+        if (typeof Chart === 'undefined') {
+            const toast = document.getElementById('tooltipToast');
+            toast.innerHTML = `<b>Diagram utilgjengelig:</b> Chart.js ble ikke lastet. Sjekk nettverk/CDN og prøv igjen.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 6000);
+            return;
+        }
+
         const history = s.Historikk.slice(-dager);
+
+        // Støtt flere mulige nøkkelnavn fra datakilden
+        const pick = (obj, keys, fallback = undefined) => {
+            for (const k of keys) {
+                if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+            }
+            return fallback;
+        };
+
+        const mapped = history.map(h => ({
+            x: pick(h, ['dato', 'date', 'Date', 'Dato']),
+            o: safeNum(pick(h, ['open', 'Open', 'o']), NaN),
+            h: safeNum(pick(h, ['high', 'High', 'h']), NaN),
+            l: safeNum(pick(h, ['low', 'Low', 'l']), NaN),
+            c: safeNum(pick(h, ['close', 'Close', 'c', 'kurs', 'Kurs']), NaN),
+            rsi: safeNum(pick(h, ['rsi', 'RSI', 'RSI_14']), safeNum(s.RSI_14, 50))
+        }));
 
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('t-' + dager);
@@ -599,13 +636,9 @@
         const ctxPrice = document.getElementById('priceChart').getContext('2d');
 
         // Map til financial-format: {x, o, h, l, c}
-        const ohlc = history.map(h => ({
-            x: h.dato,
-            o: safeNum(h.open, NaN),
-            h: safeNum(h.high, NaN),
-            l: safeNum(h.low, NaN),
-            c: safeNum(h.close, NaN)
-        })).filter(b => Number.isFinite(b.o) && Number.isFinite(b.h) && Number.isFinite(b.l) && Number.isFinite(b.c));
+        const ohlc = mapped
+            .filter(b => b.x !== undefined && b.x !== null)
+            .filter(b => Number.isFinite(b.o) && Number.isFinite(b.h) && Number.isFinite(b.l) && Number.isFinite(b.c));
 
         // Hvis financial-plugin ikke lastet, får du samme gamle feilen. Vi håndterer det pent.
         try {
@@ -632,28 +665,47 @@
             });
         } catch (e) {
             // Fallback: vis line-chart på close (så appen aldri dør)
-            const labels = history.map(h => h.dato);
-            const closes = history.map(h => safeNum(h.close, NaN)).filter(Number.isFinite);
+            const labels = mapped.map(h => h.x);
+            const closes = mapped.map(h => h.c).filter(Number.isFinite);
 
-            priceChart = new Chart(ctxPrice, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: history.map(h => safeNum(h.close, NaN)),
-                        borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
-                        borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+            if (!closes.length) {
+                const toast = document.getElementById('tooltipToast');
+                toast.innerHTML = `<b>Kursdiagram utilgjengelig:</b> Fant ingen gyldige kurspunkter i historikk-data.`;
+                toast.classList.add('active');
+                setTimeout(hideTip, 6000);
+            }
+
+            // Noen candlestick-feil oppretter chart-instans før de kaster.
+            // Da må eksisterende canvas-chart destrueres før fallback rendres.
+            const orphan = (typeof Chart.getChart === 'function') ? Chart.getChart(ctxPrice.canvas) : null;
+            if (orphan) orphan.destroy();
+
+            try {
+                priceChart = new Chart(ctxPrice, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: mapped.map(h => h.c),
+                            borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
+                            borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.15
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                        }
                     }
-                }
-            });
+                });
+            } catch (fallbackErr) {
+                const toast = document.getElementById('tooltipToast');
+                toast.innerHTML = `<b>Kursdiagram utilgjengelig:</b> Klarte ikke å tegne fallback-grafen.`;
+                toast.classList.add('active');
+                setTimeout(hideTip, 6000);
+            }
 
             // Og gi tydelig toast om hvorfor candles ikke lastet:
             const toast = document.getElementById('tooltipToast');
@@ -664,76 +716,83 @@
 
         // ---- 2) RSI CHART (med hjelpelinjer 30/70) ----
         const ctxRsi = document.getElementById('rsiChart').getContext('2d');
-        const labels = history.map(h => h.dato);
+        const labels = mapped.map(h => h.x);
 
-        const rsiValues = history.map(h => safeNum(h.rsi, 50));
+        const rsiValues = mapped.map(h => h.rsi);
         const line30 = new Array(history.length).fill(30);
         const line70 = new Array(history.length).fill(70);
 
-        rsiChart = new Chart(ctxRsi, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        data: rsiValues,
-                        borderColor: '#0a84ff',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.2
-                    },
-                    {
-                        data: line70,
-                        borderColor: '#ffffff',
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0,
-                        borderDash: [6, 6]
-                    },
-                    {
-                        data: line30,
-                        borderColor: '#ffffff',
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0,
-                        borderDash: [6, 6]
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: {
-                            color: '#8e8e93',
-                            autoSkip: true,
-                            maxTicksLimit: 5,
-                            font: { size: 10 }
+        try {
+            rsiChart = new Chart(ctxRsi, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            data: rsiValues,
+                            borderColor: '#0a84ff',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.2
+                        },
+                        {
+                            data: line70,
+                            borderColor: '#ffffff',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0,
+                            borderDash: [6, 6]
+                        },
+                        {
+                            data: line30,
+                            borderColor: '#ffffff',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0,
+                            borderDash: [6, 6]
                         }
-                    },
-                    y: {
-                        min: 0,
-                        max: 100,
-                        grid: { color: '#2c2c2e', lineWidth: 1 },
-                        ticks: {
-                            stepSize: 10,
-                            color: '#8e8e93',
-                            callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''),
-                            font: (ctx) => {
-                                const v = ctx.tick?.value;
-                                return { size: 10, weight: (v === 30 || v === 70) ? 'bold' : 'normal' };
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#8e8e93',
+                                autoSkip: true,
+                                maxTicksLimit: 5,
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: '#2c2c2e', lineWidth: 1 },
+                            ticks: {
+                                stepSize: 10,
+                                color: '#8e8e93',
+                                callback: (v) => ([0, 30, 50, 70, 100].includes(v) ? v : ''),
+                                font: (ctx) => {
+                                    const v = ctx.tick?.value;
+                                    return { size: 10, weight: (v === 30 || v === 70) ? 'bold' : 'normal' };
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            const toast = document.getElementById('tooltipToast');
+            toast.innerHTML = `<b>RSI-diagram utilgjengelig:</b> Klarte ikke å tegne grafen med mottatt data.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 6000);
+        }
     }
 
     function render() {
