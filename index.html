@@ -62,9 +62,31 @@
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
 
-        .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
-        .chart-price-container { height: 180px; margin-bottom: 25px; }
-        .chart-rsi-container { height: 110px; }
+        .charts-wrapper {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart-price-container {
+            position: relative;
+            height: min(46vh, 340px);
+            min-height: 220px;
+        }
+        .chart-rsi-container {
+            position: relative;
+            height: min(26vh, 180px);
+            min-height: 130px;
+        }
+        .chart-price-container canvas,
+        .chart-rsi-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
@@ -111,6 +133,9 @@
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
+        .chart-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: -4px 0 12px; }
+        .chart-type-btn { background: var(--card); border: 1px solid #3a3a3c; border-radius: 10px; padding: 8px 0; color: var(--secondary); font-size: 11px; font-weight: 800; text-align: center; }
+        .chart-type-btn.active { background: #3a3a3c; color: #fff; border-color: #4a4a4c; }
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white;
@@ -160,6 +185,11 @@
         <div class="time-btn" id="t-365" onclick="changeTime(365)">1Å</div>
     </div>
 
+    <div class="chart-type-row">
+        <div class="chart-type-btn" id="ctype-candlestick" onclick="setPriceChartType('candlestick')">Candlestick</div>
+        <div class="chart-type-btn" id="ctype-line" onclick="setPriceChartType('line')">Linje</div>
+    </div>
+
     <div class="charts-wrapper">
         <div class="chart-price-container"><canvas id="priceChart"></canvas></div>
         <div class="chart-rsi-container"><canvas id="rsiChart"></canvas></div>
@@ -178,6 +208,10 @@
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {};
     let priceChart = null; let rsiChart = null;
     let currentTicker = null;
+    let currentDays = 30;
+    const PRICE_CHART_TYPE_KEY = 'preferredPriceChartType';
+    const normalizeChartType = (type) => type === 'line' ? 'line' : 'candlestick';
+    let preferredPriceChartType = normalizeChartType(localStorage.getItem(PRICE_CHART_TYPE_KEY));
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> 30=Oversolgt, 70=Overkjøpt. De hvite linjene markerer faresonene.",
@@ -466,8 +500,122 @@
     }
 
     function changeTime(days) {
+        currentDays = days;
         updateChart(days, currentTicker);
     }
+
+    function syncChartTypeButtons() {
+        const buttons = document.querySelectorAll('.chart-type-btn');
+        if (!buttons.length) return;
+        buttons.forEach((btn) => btn.classList.remove('active'));
+        const active = document.getElementById('ctype-' + preferredPriceChartType);
+        if (active) active.classList.add('active');
+    }
+
+    function setPriceChartType(type) {
+        const nextType = normalizeChartType(type);
+        if (nextType === preferredPriceChartType) return;
+        preferredPriceChartType = nextType;
+        localStorage.setItem(PRICE_CHART_TYPE_KEY, preferredPriceChartType);
+        syncChartTypeButtons();
+        if (currentTicker) updateChart(currentDays, currentTicker);
+    }
+
+    function getStockHistory(s) {
+        if (!s || typeof s !== 'object') return [];
+        const historySources = [s.Historikk, s.historikk, s.history, s.History];
+        for (const source of historySources) {
+            if (Array.isArray(source) && source.length) return source;
+        }
+        return [];
+    }
+
+    function normNumber(v, fallback = NaN) {
+        if (typeof v === 'string') {
+            const normalized = v.replace(',', '.').replace(/\s/g, '');
+            const parsed = Number(normalized);
+            return Number.isFinite(parsed) ? parsed : fallback;
+        }
+        const parsed = Number(v);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function pickDate(h, idx) {
+        return h?.dato || h?.date || h?.Date || h?.tid || `P${idx + 1}`;
+    }
+
+    function buildFallbackHistory(s, length) {
+        const base = normNumber(s?.['Siste kurs'], 100);
+        const rsi = normNumber(s?.RSI_14, 50);
+        return Array.from({ length }, (_, i) => ({
+            dato: `P${i + 1}`,
+            open: base,
+            high: base,
+            low: base,
+            close: base,
+            rsi
+        }));
+    }
+
+
+    function destroyChartOnCanvas(canvasId) {
+        if (typeof Chart !== 'function' || typeof Chart.getChart !== 'function') return;
+        const existing = Chart.getChart(canvasId);
+        if (existing) existing.destroy();
+    }
+
+    function drawCanvasFallback(canvasId, values, { min = null, max = null, color = '#0a84ff', extraLines = [] } = {}) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const width = Math.max(canvas.clientWidth, 200);
+        const height = Math.max(canvas.clientHeight, 120);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#1c1c1e';
+        ctx.fillRect(0, 0, width, height);
+
+        const clean = values.map(v => normNumber(v)).filter(Number.isFinite);
+        if (!clean.length) return;
+
+        let vMin = Number.isFinite(min) ? min : Math.min(...clean);
+        let vMax = Number.isFinite(max) ? max : Math.max(...clean);
+        if (vMax <= vMin) { vMax = vMin + 1; }
+
+        const pad = 10;
+        const innerW = width - pad * 2;
+        const innerH = height - pad * 2;
+
+        ctx.strokeStyle = '#2c2c2e';
+        ctx.lineWidth = 1;
+        for (const lineVal of extraLines) {
+            const y = pad + (1 - (lineVal - vMin) / (vMax - vMin)) * innerH;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(pad, y);
+            ctx.lineTo(width - pad, y);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        values.forEach((raw, i) => {
+            const val = normNumber(raw, clean[Math.max(0, i - 1)] ?? clean[0]);
+            const x = pad + (i / Math.max(values.length - 1, 1)) * innerW;
+            const y = pad + (1 - (val - vMin) / (vMax - vMin)) * innerH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
 
     function openDetail(ticker) {
         currentTicker = ticker;
@@ -579,14 +727,25 @@
         `;
 
         document.getElementById('detailPage').style.display = 'block';
-        updateChart(30, ticker);
+        currentDays = 30;
+        syncChartTypeButtons();
+        requestAnimationFrame(() => updateChart(currentDays, ticker));
     }
 
     function updateChart(dager, ticker) {
+        currentDays = dager;
+        syncChartTypeButtons();
         const s = stocks.find(x => x.Aksje === ticker);
-        if(!s || !s.Historikk) return;
-    
-        const history = s.Historikk.slice(-dager);
+        if(!s) return;
+
+        const toast = document.getElementById('tooltipToast');
+        const sourceHistory = getStockHistory(s);
+        const history = (sourceHistory.length ? sourceHistory : buildFallbackHistory(s, dager)).slice(-dager);
+        if (!sourceHistory.length) {
+            toast.innerHTML = `<b>Mangler historikk:</b> Viser midlertidig linje basert på siste kurs.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 3500);
+        }
     
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('t-' + dager);
@@ -594,33 +753,35 @@
     
         if (priceChart) priceChart.destroy();
         if (rsiChart) rsiChart.destroy();
+        destroyChartOnCanvas('priceChart');
+        destroyChartOnCanvas('rsiChart');
     
-        const toast = document.getElementById('tooltipToast');
-    
+
         // -------- 1) PRICE: Candlestick (med fallback) --------
         const ctxPrice = document.getElementById('priceChart')?.getContext('2d');
         if (!ctxPrice) return;
     
-        const labels = history.map(h => h.dato);
+        const labels = history.map((h, i) => pickDate(h, i));
     
         // Bygg OHLC uten å filtrere bort alt (men dropp rader som mangler close)
         const ohlc = history
-            .map(h => ({
-                x: h.dato,
-                o: Number(h.open),
-                h: Number(h.high),
-                l: Number(h.low),
-                c: Number(h.close)
+            .map((h, i) => ({
+                x: i,
+                o: normNumber(h.open),
+                h: normNumber(h.high),
+                l: normNumber(h.low),
+                c: normNumber(h.close)
             }))
-            .filter(b => Number.isFinite(b.c)); // minimum: må ha close
+            .filter(b => Number.isFinite(b.x) && Number.isFinite(b.o) && Number.isFinite(b.h) && Number.isFinite(b.l) && Number.isFinite(b.c));
     
         const closes = history.map(h => {
-            const c = Number(h.close);
+            const c = normNumber(h.close);
             return Number.isFinite(c) ? c : null;
         });
     
         // Hvis vi ikke har nok OHLC for candles -> fallback til line
-        const canCandle = (ohlc.length >= 5);
+        const wantsCandle = preferredPriceChartType === 'candlestick';
+        const canCandle = wantsCandle && (ohlc.length >= 5);
     
         try {
             if (canCandle) {
@@ -645,11 +806,12 @@
                         }]
                     },
                     options: {
+                        parsing: false,
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: false },
+                            x: { type: 'linear', display: false },
                             y: {
                                 grid: { color: '#2c2c2e' },
                                 ticks: { color: '#8e8e93', font: { size: 10 } }
@@ -682,38 +844,45 @@
                     }
                 });
     
-                toast.innerHTML = `<b>Viser linjechart:</b> Mangler nok OHLC-punkter for candlestick (${ohlc.length}).`;
-                toast.classList.add('active');
-                setTimeout(hideTip, 4500);
+                if (wantsCandle) {
+                    toast.innerHTML = `<b>Viser linjechart:</b> Mangler gyldige OHLC/tidspunkter for candlestick (${ohlc.length}).`;
+                    toast.classList.add('active');
+                    setTimeout(hideTip, 4500);
+                }
             }
         } catch (e) {
             // Hvis plugin ikke lastet / annen feil -> fallback line-chart + feilmelding
-            priceChart = new Chart(ctxPrice, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: closes,
-                        borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
-                        borderWidth: 2.5,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.15
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+            if (typeof Chart === 'function') {
+                destroyChartOnCanvas('priceChart');
+                priceChart = new Chart(ctxPrice, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: closes,
+                            borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.15
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                        }
                     }
-                }
-            });
+                });
+            }
     
-            toast.innerHTML = `<b>Candlestick-feil:</b> ${e?.message || e}.<br><span style="color:var(--secondary);font-size:12px;">Sjekk at chartjs-chart-financial lastes fra CDN.</span>`;
-            toast.classList.add('active');
-            setTimeout(hideTip, 6500);
+            if (wantsCandle) {
+                toast.innerHTML = `<b>Candlestick-feil:</b> ${e?.message || e}.<br><span style="color:var(--secondary);font-size:12px;">Tips: bytt til Linje. Candlestick krever gyldig plugin + tidsakse i miljøet.</span>`;
+                toast.classList.add('active');
+                setTimeout(hideTip, 6500);
+            }
         }
     
         // -------- 2) RSI chart --------
@@ -721,13 +890,30 @@
         if (!ctxRsi) return;
     
         const rsiValues = history.map(h => {
-            const r = Number(h.rsi);
+            const r = normNumber(h.rsi);
             return Number.isFinite(r) ? r : 50;
         });
     
         const line30 = new Array(history.length).fill(30);
         const line70 = new Array(history.length).fill(70);
     
+
+        if (typeof Chart !== 'function') {
+            drawCanvasFallback('priceChart', closes, {
+                color: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a'
+            });
+            drawCanvasFallback('rsiChart', rsiValues, {
+                min: 0,
+                max: 100,
+                color: '#0a84ff',
+                extraLines: [30, 70]
+            });
+            toast.innerHTML = `<b>Chart.js ikke lastet:</b> Viser enkel fallback-visning.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 4500);
+            return;
+        }
+
         rsiChart = new Chart(ctxRsi, {
             type: 'line',
             data: {
@@ -792,6 +978,11 @@
                 }
             }
         });
+
+        setTimeout(() => {
+            priceChart?.resize();
+            rsiChart?.resize();
+        }, 0);
     }
 
     function render() {
