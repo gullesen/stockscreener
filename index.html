@@ -491,6 +491,102 @@
         updateChart(days, currentTicker);
     }
 
+    function getStockHistory(s) {
+        if (!s || typeof s !== 'object') return [];
+        const candidates = [s.Historikk, s.historikk, s.history, s.History];
+        for (const c of candidates) {
+            if (Array.isArray(c) && c.length) return c;
+        }
+        return [];
+    }
+
+    function normNumber(v, fallback = NaN) {
+        if (typeof v === 'string') {
+            const normalized = v.replace(',', '.').replace(/\s/g, '');
+            const n = Number(normalized);
+            return Number.isFinite(n) ? n : fallback;
+        }
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
+    function pickDate(h, idx) {
+        return h?.dato || h?.date || h?.Date || h?.tid || `P${idx + 1}`;
+    }
+
+    function buildFallbackHistory(s, length) {
+        const base = normNumber(s?.['Siste kurs'], 100);
+        const rsi = normNumber(s?.RSI_14, 50);
+        return Array.from({ length }, (_, i) => ({
+            dato: `P${i + 1}`,
+            open: base,
+            high: base,
+            low: base,
+            close: base,
+            rsi
+        }));
+    }
+
+
+    function destroyChartOnCanvas(canvasId) {
+        if (typeof Chart !== 'function' || typeof Chart.getChart !== 'function') return;
+        const existing = Chart.getChart(canvasId);
+        if (existing) existing.destroy();
+    }
+
+    function drawCanvasFallback(canvasId, values, { min = null, max = null, color = '#0a84ff', extraLines = [] } = {}) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const width = Math.max(canvas.clientWidth, 200);
+        const height = Math.max(canvas.clientHeight, 120);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#1c1c1e';
+        ctx.fillRect(0, 0, width, height);
+
+        const clean = values.map(v => normNumber(v)).filter(Number.isFinite);
+        if (!clean.length) return;
+
+        let vMin = Number.isFinite(min) ? min : Math.min(...clean);
+        let vMax = Number.isFinite(max) ? max : Math.max(...clean);
+        if (vMax <= vMin) { vMax = vMin + 1; }
+
+        const pad = 10;
+        const innerW = width - pad * 2;
+        const innerH = height - pad * 2;
+
+        ctx.strokeStyle = '#2c2c2e';
+        ctx.lineWidth = 1;
+        for (const lineVal of extraLines) {
+            const y = pad + (1 - (lineVal - vMin) / (vMax - vMin)) * innerH;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(pad, y);
+            ctx.lineTo(width - pad, y);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        values.forEach((raw, i) => {
+            const val = normNumber(raw, clean[Math.max(0, i - 1)] ?? clean[0]);
+            const x = pad + (i / Math.max(values.length - 1, 1)) * innerW;
+            const y = pad + (1 - (val - vMin) / (vMax - vMin)) * innerH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
+
     function openDetail(ticker) {
         currentTicker = ticker;
         const s = stocks.find(x => x.Aksje === ticker);
@@ -606,9 +702,16 @@
 
     function updateChart(dager, ticker) {
         const s = stocks.find(x => x.Aksje === ticker);
-        if(!s || !s.Historikk) return;
-    
-        const history = s.Historikk.slice(-dager);
+        if(!s) return;
+
+        const toast = document.getElementById('tooltipToast');
+        const sourceHistory = getStockHistory(s);
+        const history = (sourceHistory.length ? sourceHistory : buildFallbackHistory(s, dager)).slice(-dager);
+        if (!sourceHistory.length) {
+            toast.innerHTML = `<b>Mangler historikk:</b> Viser midlertidig linje basert på siste kurs.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 3500);
+        }
     
         document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById('t-' + dager);
@@ -616,28 +719,29 @@
     
         if (priceChart) priceChart.destroy();
         if (rsiChart) rsiChart.destroy();
+        destroyChartOnCanvas('priceChart');
+        destroyChartOnCanvas('rsiChart');
     
-        const toast = document.getElementById('tooltipToast');
-    
+
         // -------- 1) PRICE: Candlestick (med fallback) --------
         const ctxPrice = document.getElementById('priceChart')?.getContext('2d');
         if (!ctxPrice) return;
     
-        const labels = history.map(h => h.dato);
+        const labels = history.map((h, i) => pickDate(h, i));
     
         // Bygg OHLC uten å filtrere bort alt (men dropp rader som mangler close)
         const ohlc = history
-            .map(h => ({
-                x: h.dato,
-                o: Number(h.open),
-                h: Number(h.high),
-                l: Number(h.low),
-                c: Number(h.close)
+            .map((h, i) => ({
+                x: pickDate(h, i),
+                o: normNumber(h.open),
+                h: normNumber(h.high),
+                l: normNumber(h.low),
+                c: normNumber(h.close)
             }))
             .filter(b => Number.isFinite(b.c)); // minimum: må ha close
     
         const closes = history.map(h => {
-            const c = Number(h.close);
+            const c = normNumber(h.close);
             return Number.isFinite(c) ? c : null;
         });
     
@@ -710,28 +814,31 @@
             }
         } catch (e) {
             // Hvis plugin ikke lastet / annen feil -> fallback line-chart + feilmelding
-            priceChart = new Chart(ctxPrice, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: closes,
-                        borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
-                        borderWidth: 2.5,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.15
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+            if (typeof Chart === 'function') {
+                destroyChartOnCanvas('priceChart');
+                priceChart = new Chart(ctxPrice, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: closes,
+                            borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.15
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
+                        }
                     }
-                }
-            });
+                });
+            }
     
             toast.innerHTML = `<b>Candlestick-feil:</b> ${e?.message || e}.<br><span style="color:var(--secondary);font-size:12px;">Sjekk at chartjs-chart-financial lastes fra CDN.</span>`;
             toast.classList.add('active');
@@ -743,13 +850,30 @@
         if (!ctxRsi) return;
     
         const rsiValues = history.map(h => {
-            const r = Number(h.rsi);
+            const r = normNumber(h.rsi);
             return Number.isFinite(r) ? r : 50;
         });
     
         const line30 = new Array(history.length).fill(30);
         const line70 = new Array(history.length).fill(70);
     
+
+        if (typeof Chart !== 'function') {
+            drawCanvasFallback('priceChart', closes, {
+                color: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a'
+            });
+            drawCanvasFallback('rsiChart', rsiValues, {
+                min: 0,
+                max: 100,
+                color: '#0a84ff',
+                extraLines: [30, 70]
+            });
+            toast.innerHTML = `<b>Chart.js ikke lastet:</b> Viser enkel fallback-visning.`;
+            toast.classList.add('active');
+            setTimeout(hideTip, 4500);
+            return;
+        }
+
         rsiChart = new Chart(ctxRsi, {
             type: 'line',
             data: {
