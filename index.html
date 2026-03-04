@@ -209,7 +209,9 @@
     let priceChart = null; let rsiChart = null;
     let currentTicker = null;
     let currentDays = 30;
-    let preferredPriceChartType = (localStorage.getItem('preferredPriceChartType') === 'line') ? 'line' : 'candlestick';
+    const PRICE_CHART_TYPE_KEY = 'preferredPriceChartType';
+    const normalizeChartType = (type) => type === 'line' ? 'line' : 'candlestick';
+    let preferredPriceChartType = normalizeChartType(localStorage.getItem(PRICE_CHART_TYPE_KEY));
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> 30=Oversolgt, 70=Overkjøpt. De hvite linjene markerer faresonene.",
@@ -511,8 +513,10 @@
     }
 
     function setPriceChartType(type) {
-        preferredPriceChartType = (type === 'line') ? 'line' : 'candlestick';
-        localStorage.setItem('preferredPriceChartType', preferredPriceChartType);
+        const nextType = normalizeChartType(type);
+        if (nextType === preferredPriceChartType) return;
+        preferredPriceChartType = nextType;
+        localStorage.setItem(PRICE_CHART_TYPE_KEY, preferredPriceChartType);
         syncChartTypeButtons();
         if (currentTicker) updateChart(currentDays, currentTicker);
     }
@@ -529,11 +533,11 @@
     function normNumber(v, fallback = NaN) {
         if (typeof v === 'string') {
             const normalized = v.replace(',', '.').replace(/\s/g, '');
-            const n = Number(normalized);
-            return Number.isFinite(n) ? n : fallback;
+            const parsed = Number(normalized);
+            return Number.isFinite(parsed) ? parsed : fallback;
         }
-        const n = Number(v);
-        return Number.isFinite(n) ? n : fallback;
+        const parsed = Number(v);
+        return Number.isFinite(parsed) ? parsed : fallback;
     }
 
     function pickDate(h, idx) {
