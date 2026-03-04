@@ -526,6 +526,11 @@
         const historySources = [s.Historikk, s.historikk, s.history, s.History];
         for (const source of historySources) {
             if (Array.isArray(source) && source.length) return source;
+    function getStockHistory(s) {
+        if (!s || typeof s !== 'object') return [];
+        const candidates = [s.Historikk, s.historikk, s.history, s.History];
+        for (const c of candidates) {
+            if (Array.isArray(c) && c.length) return c;
         }
         return [];
     }
@@ -538,6 +543,11 @@
         }
         const parsed = Number(v);
         return Number.isFinite(parsed) ? parsed : fallback;
+            const n = Number(normalized);
+            return Number.isFinite(n) ? n : fallback;
+        }
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
     }
 
     function pickDate(h, idx) {
@@ -730,6 +740,7 @@
         currentDays = 30;
         syncChartTypeButtons();
         requestAnimationFrame(() => updateChart(currentDays, ticker));
+        requestAnimationFrame(() => updateChart(30, ticker));
     }
 
     function updateChart(dager, ticker) {
@@ -767,6 +778,7 @@
         const ohlc = history
             .map((h, i) => ({
                 x: i,
+                x: pickDate(h, i),
                 o: normNumber(h.open),
                 h: normNumber(h.high),
                 l: normNumber(h.low),
