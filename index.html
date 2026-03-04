@@ -641,6 +641,12 @@
     }
 
 
+    function destroyChartOnCanvas(canvasId) {
+        if (typeof Chart !== 'function' || typeof Chart.getChart !== 'function') return;
+        const existing = Chart.getChart(canvasId);
+        if (existing) existing.destroy();
+    }
+
     function drawCanvasFallback(canvasId, values, { min = null, max = null, color = '#0a84ff', extraLines = [] } = {}) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
@@ -712,6 +718,8 @@
     
         if (priceChart) priceChart.destroy();
         if (rsiChart) rsiChart.destroy();
+        destroyChartOnCanvas('priceChart');
+        destroyChartOnCanvas('rsiChart');
     
 
         // -------- 1) PRICE: Candlestick (med fallback) --------
@@ -806,6 +814,7 @@
         } catch (e) {
             // Hvis plugin ikke lastet / annen feil -> fallback line-chart + feilmelding
             if (typeof Chart === 'function') {
+                destroyChartOnCanvas('priceChart');
                 priceChart = new Chart(ctxPrice, {
                     type: 'line',
                     data: {
