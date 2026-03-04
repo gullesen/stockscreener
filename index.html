@@ -62,9 +62,31 @@
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .back-btn { color: var(--blue); font-size: 17px; font-weight: 600; cursor: pointer; }
 
-        .charts-wrapper { background: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 20px; }
-        .chart-price-container { height: 180px; margin-bottom: 25px; }
-        .chart-rsi-container { height: 110px; }
+        .charts-wrapper {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart-price-container {
+            position: relative;
+            height: min(46vh, 340px);
+            min-height: 220px;
+        }
+        .chart-rsi-container {
+            position: relative;
+            height: min(26vh, 180px);
+            min-height: 130px;
+        }
+        .chart-price-container canvas,
+        .chart-rsi-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
@@ -579,7 +601,7 @@
         `;
 
         document.getElementById('detailPage').style.display = 'block';
-        updateChart(30, ticker);
+        requestAnimationFrame(() => updateChart(30, ticker));
     }
 
     function updateChart(dager, ticker) {
@@ -792,6 +814,11 @@
                 }
             }
         });
+
+        setTimeout(() => {
+            priceChart?.resize();
+            rsiChart?.resize();
+        }, 0);
     }
 
     function render() {
