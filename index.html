@@ -503,7 +503,9 @@
     }
 
     function syncChartTypeButtons() {
-        document.querySelectorAll('.chart-type-btn').forEach((btn) => btn.classList.remove('active'));
+        const buttons = document.querySelectorAll('.chart-type-btn');
+        if (!buttons.length) return;
+        buttons.forEach((btn) => btn.classList.remove('active'));
         const active = document.getElementById('ctype-' + preferredPriceChartType);
         if (active) active.classList.add('active');
     }
@@ -517,9 +519,9 @@
 
     function getStockHistory(s) {
         if (!s || typeof s !== 'object') return [];
-        const candidates = [s.Historikk, s.historikk, s.history, s.History];
-        for (const c of candidates) {
-            if (Array.isArray(c) && c.length) return c;
+        const historySources = [s.Historikk, s.historikk, s.history, s.History];
+        for (const source of historySources) {
+            if (Array.isArray(source) && source.length) return source;
         }
         return [];
     }
