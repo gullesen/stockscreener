@@ -133,6 +133,12 @@
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
         .time-btn.active { background: #3a3a3c; color: white; }
+        .alert-section { background: var(--card); border-radius: 18px; padding: 16px; margin-top: 10px; border: 1px solid #2c2c2e; }
+        .alert-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+        .alert-input, .alert-select { margin: 0; max-width: 120px; text-align: center; font-weight: 700; }
+        .alert-helper { font-size: 12px; color: var(--secondary); margin-top: 8px; line-height: 1.35; }
+        .alert-status { font-size: 12px; color: var(--blue); font-weight: 600; margin-top: 8px; }
+        .alert-btn { background: transparent; border: 1px solid #3a3a3c; color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white;
@@ -198,6 +204,8 @@
     let radarStocks = JSON.parse(localStorage.getItem('radarStocks')) || [];
     let myGAVs = JSON.parse(localStorage.getItem('myGAVs')) || {};
     let myNotes = JSON.parse(localStorage.getItem('myNotes')) || {};
+    let rsiAlerts = JSON.parse(localStorage.getItem('rsiAlerts')) || {};
+    let rsiAlertState = JSON.parse(localStorage.getItem('rsiAlertState')) || {};
     let priceChart = null; let rsiChart = null;
     let currentTicker = null;
 
@@ -454,6 +462,7 @@
                     document.getElementById('ts-time').innerText = tp[1] || '--:--';
                 }
             }
+            evaluateRsiAlerts();
             render();
         } catch (e) {
             document.getElementById('list').innerHTML =
@@ -595,6 +604,7 @@
 
         const gav = myGAVs[ticker] || "";
         const note = myNotes[ticker] || "";
+        const alertCfg = getRsiAlertConfig(ticker);
 
         let profitHtml = "";
         if (gav) {
@@ -687,6 +697,28 @@
             <div class="list-actions">
                 <button class="action-btn ${myStocks.includes(ticker)?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${myStocks.includes(ticker)?'✓ Mine':' + Mine'}</button>
                 <button class="action-btn ${radarStocks.includes(ticker)?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${radarStocks.includes(ticker)?'✓ Radar':' + Radar'}</button>
+            </div>
+
+            <div class="alert-section">
+                <div class="user-data-title">RSI-varsler til nettleser/telefon</div>
+                <div class="alert-row">
+                    <input type="number" min="1" max="99" step="0.1" class="alert-input" value="${alertCfg.threshold ?? ''}" placeholder="f.eks. 70" onchange="saveRsiAlert('${ticker}', this.value, this.parentElement.querySelector('select').value)">
+                    <select class="alert-select" onchange="saveRsiAlert('${ticker}', this.parentElement.querySelector('input').value, this.value)">
+                        <option value="above" ${alertCfg.direction === 'above' ? 'selected' : ''}>Stiger over</option>
+                        <option value="below" ${alertCfg.direction === 'below' ? 'selected' : ''}>Synker under</option>
+                    </select>
+                    ${getNotificationPermissionState() !== 'granted' ? '<button class="alert-btn" onclick="requestNotificationPermission()">Aktiver varsler</button>' : ''}
+                </div>
+                <div class="alert-helper">Velg RSI-nivå + retning: få varsel når RSI stiger over eller synker under valgt verdi. Varslet deaktiveres automatisk etter første treff.</div>
+                <div class="alert-status">${
+                    getNotificationPermissionState() === 'granted'
+                        ? 'Varsler er aktivert i nettleseren.'
+                        : getNotificationPermissionState() === 'denied'
+                            ? 'Varsler er blokkert i nettleseren. Du må aktivere manuelt i innstillinger.'
+                            : getNotificationPermissionState() === 'unsupported'
+                                ? 'Denne nettleseren støtter ikke Notification API.'
+                                : 'Klikk "Aktiver varsler" for å tillate varsler.'
+                }</div>
             </div>
 
             <div class="user-data-section">
@@ -1037,10 +1069,89 @@
         render();
     }
 
+    function getNotificationPermissionState() {
+        if (typeof Notification === 'undefined') return 'unsupported';
+        return Notification.permission;
+    }
+
+    async function requestNotificationPermission() {
+        if (typeof Notification === 'undefined') return;
+        try {
+            await Notification.requestPermission();
+            if (currentTicker) openDetail(currentTicker);
+        } catch (_) {}
+    }
+
+    function getRsiAlertConfig(ticker) {
+        const raw = rsiAlerts[ticker];
+        if (Number.isFinite(Number(raw))) return { threshold: Number(raw), direction: 'above' };
+        if (raw && typeof raw === 'object') {
+            const threshold = Number(raw.threshold);
+            const direction = raw.direction === 'below' ? 'below' : 'above';
+            if (Number.isFinite(threshold)) return { threshold, direction };
+        }
+        return { threshold: null, direction: 'above' };
+    }
+
+    function saveRsiAlert(ticker, rawValue, rawDirection = 'above') {
+        const value = Number(rawValue);
+        const direction = rawDirection === 'below' ? 'below' : 'above';
+        if (!Number.isFinite(value)) {
+            delete rsiAlerts[ticker];
+            delete rsiAlertState[ticker];
+        } else {
+            const threshold = clamp(value, 1, 99);
+            rsiAlerts[ticker] = { threshold: Number(threshold.toFixed(1)), direction };
+            rsiAlertState[ticker] = { matched: false, direction };
+        }
+        localStorage.setItem('rsiAlerts', JSON.stringify(rsiAlerts));
+        localStorage.setItem('rsiAlertState', JSON.stringify(rsiAlertState));
+        if (currentTicker === ticker) openDetail(ticker);
+    }
+
+    function evaluateRsiAlerts() {
+        const activeTickers = Object.keys(rsiAlerts);
+        if (!activeTickers.length || !stocks.length) return;
+
+        let alertsChanged = false;
+        activeTickers.forEach((ticker) => {
+            const cfg = getRsiAlertConfig(ticker);
+            const threshold = Number(cfg.threshold);
+            const direction = cfg.direction === 'below' ? 'below' : 'above';
+            const stock = stocks.find((x) => x.Aksje === ticker);
+            if (!Number.isFinite(threshold) || !stock) return;
+
+            const rsi = safeNum(stock.RSI_14, NaN);
+            if (!Number.isFinite(rsi)) return;
+
+            const prevState = rsiAlertState[ticker] || {};
+            const isMatch = direction === 'below' ? (rsi <= threshold) : (rsi >= threshold);
+            const wasMatch = typeof prevState.matched === 'boolean' ? prevState.matched : isMatch;
+
+            if (!wasMatch && isMatch && getNotificationPermissionState() === 'granted') {
+                const transitionTxt = direction === 'below' ? 'falt under' : 'passert over';
+                new Notification(`RSI-varsel: ${ticker}`, {
+                    body: `RSI ${rsi.toFixed(1)} ${transitionTxt} ${threshold}. Kurs: ${Number(getLastPrice(stock)).toFixed(2)}`,
+                    tag: `rsi-alert-${ticker}`
+                });
+                delete rsiAlerts[ticker];
+                delete rsiAlertState[ticker];
+                alertsChanged = true;
+                return;
+            }
+
+            rsiAlertState[ticker] = { matched: isMatch, direction, lastRsi: Number(rsi.toFixed(2)) };
+        });
+
+        if (alertsChanged) localStorage.setItem('rsiAlerts', JSON.stringify(rsiAlerts));
+        localStorage.setItem('rsiAlertState', JSON.stringify(rsiAlertState));
+    }
+
     function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
 
     // Start
     load();
+    setInterval(load, 60000);
 </script>
 </body>
 </html>
