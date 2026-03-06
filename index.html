@@ -7,10 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- ✅ Stabil kombinasjon for candlestick -->
+    <!-- ✅ Grunnoppsett for linjediagram -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
 
     <style>
         :root {
@@ -755,97 +754,42 @@
         destroyChartOnCanvas('rsiChart');
     
 
-        // -------- 1) PRICE: Candlestick (med fallback) --------
+        // -------- 1) PRICE: Linjediagram --------
         const ctxPrice = document.getElementById('priceChart')?.getContext('2d');
         if (!ctxPrice) return;
-    
+
         const labels = history.map((h, i) => pickDate(h, i));
-    
-        // Bygg OHLC uten å filtrere bort alt (men dropp rader som mangler close)
-        const ohlc = history
-            .map((h, i) => ({
-                x: pickDate(h, i),
-                o: normNumber(h.open),
-                h: normNumber(h.high),
-                l: normNumber(h.low),
-                c: normNumber(h.close)
-            }))
-            .filter(b => Number.isFinite(b.c)); // minimum: må ha close
-    
+
         const closes = history.map(h => {
             const c = normNumber(h.close);
             return Number.isFinite(c) ? c : null;
         });
-    
-        // Hvis vi ikke har nok OHLC for candles -> fallback til line
-        const canCandle = (ohlc.length >= 5);
-    
+
         try {
-            if (canCandle) {
-                priceChart = new Chart(ctxPrice, {
-                    type: 'candlestick',
-                    data: {
-                        datasets: [{
-                            label: ticker,
-                            data: ohlc,
-    
-                            // ✅ sørg for synlige farger på mørk bakgrunn
-                            color: {
-                                up: '#32d74b',
-                                down: '#ff453a',
-                                unchanged: '#8e8e93'
-                            },
-                            borderColor: {
-                                up: '#32d74b',
-                                down: '#ff453a',
-                                unchanged: '#8e8e93'
-                            }
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { display: false },
-                            y: {
-                                grid: { color: '#2c2c2e' },
-                                ticks: { color: '#8e8e93', font: { size: 10 } }
-                            }
-                        }
+            priceChart = new Chart(ctxPrice, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: closes,
+                        borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.15
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
                     }
-                });
-            } else {
-                // Fallback line-chart
-                priceChart = new Chart(ctxPrice, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            data: closes,
-                            borderColor: safeNum(s.RS_dag, 0) >= 0 ? '#32d74b' : '#ff453a',
-                            borderWidth: 2.5,
-                            pointRadius: 0,
-                            fill: false,
-                            tension: 0.15
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { display: false },
-                            y: { grid: { color: '#2c2c2e' }, ticks: { color: '#8e8e93', font: { size: 10 } } }
-                        }
-                    }
-                });
-    
-                toast.innerHTML = `<b>Viser linjechart:</b> Mangler nok OHLC-punkter for candlestick (${ohlc.length}).`;
-                toast.classList.add('active');
-                setTimeout(hideTip, 4500);
-            }
+                }
+            });
         } catch (e) {
-            // Hvis plugin ikke lastet / annen feil -> fallback line-chart + feilmelding
+            // Hvis Chart.js feiler -> fallback line-chart + feilmelding
             if (typeof Chart === 'function') {
                 destroyChartOnCanvas('priceChart');
                 priceChart = new Chart(ctxPrice, {
@@ -872,7 +816,7 @@
                 });
             }
     
-            toast.innerHTML = `<b>Candlestick-feil:</b> ${e?.message || e}.<br><span style="color:var(--secondary);font-size:12px;">Sjekk at chartjs-chart-financial lastes fra CDN.</span>`;
+            toast.innerHTML = `<b>Graf-feil:</b> ${e?.message || e}.`;
             toast.classList.add('active');
             setTimeout(hideTip, 6500);
         }
