@@ -35,7 +35,7 @@
         .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .filter-btn { flex: 1; font-weight: 600; }
         .active-filter { background: var(--blue) !important; }
-        .sort-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
+        .sort-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
@@ -90,6 +90,7 @@
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .info-box { background: var(--card); padding: 15px; border-radius: 15px; }
+        .muted-mini { font-size: 11px; color: var(--secondary); font-weight: 600; margin-top: 4px; }
 
         /* 3-lags signalboks */
         .signal-box {
@@ -170,6 +171,8 @@
         <div id="btn-rsi" class="sort-btn" onclick="setSort('rsi')">RSI</div>
         <div id="btn-volum" class="sort-btn" onclick="setSort('volum')">Vol %</div>
         <div id="btn-rr" class="sort-btn" onclick="setSort('rr')">R/R</div>
+        <div id="btn-rs" class="sort-btn" onclick="setSort('rs')">RS 3M</div>
+        <div id="btn-atr" class="sort-btn" onclick="setSort('atr')">ATR %</div>
         <div id="btn-ticker" class="sort-btn" onclick="setSort('ticker')">Navn</div>
     </div>
 </div>
@@ -212,12 +215,17 @@
 
     const tooltips = {
         rsi: "<b>RSI (14):</b> 30=Oversolgt, 70=Overkjøpt. De hvite linjene markerer faresonene.",
-        volum: "<b>Volum %:</b> Dagens volum mot 20-dg snitt.",
+        volum: "<b>Volum %:</b> Dagens volum mot 20-dagers snittvolum.",
         rr: "<b>Risk/Reward:</b> Oppside mot nedside basert på 50-dagers støtte/motstand.",
-        trend: "<b>Trend:</b> Kombinerer pris vs SMA200, SMA50 vs SMA200 og MACD-momentum.",
-        sma: "<b>SMA:</b> Glidende snitt (50/200).",
+        trend: "<b>Trend:</b> Backend kombinerer pris vs SMA200, SMA50 vs SMA200 og MACD.",
+        atr: "<b>ATR %:</b> Volatilitet relativt til kurs. Nyttig for stop-loss og posisjonsstørrelse.",
+        rs: "<b>RS 3M:</b> Relativ styrke siste 3 måneder mot OSEBX.",
+        sma: "<b>SMA:</b> Glidende snitt (20/50/200).",
         ema: "<b>EMA:</b> Eksponentielt snitt (9/20/200).",
-        support: "<b>Støtte/Motstand:</b> 50-dagers lav/høy brukes som proxy for støtte/motstand."
+        support: "<b>Støtte/Motstand:</b> 50-dagers lav/høy brukes som proxy for støtte/motstand.",
+        macd: "<b>MACD:</b> MACD-linje, signallinje og histogram. Histogram over null betyr at MACD ligger over signal.",
+        ret: "<b>Avkastning:</b> Prosentvis utvikling over faste perioder.",
+        high52: "<b>52-ukers nivåer:</b> Viser hvor nær aksjen er års-høy og års-lav."
     };
 
     // ✅ Bruk alltid "latest raw" for gist (slipper å oppdatere hash)
@@ -435,6 +443,24 @@
     }
 
     function computeThreeSignals(s) {
+        const backendTrend = s?.Trend_Signal;
+        const backendSetup = s?.Setup_Signal;
+        const backendRisk = s?.Risk_Signal;
+
+        if (backendTrend && backendSetup && backendRisk) {
+            const mk = (label, reason, icon) => ({
+                label,
+                reason: reason || '',
+                icon: icon || miniDot({icon}).icon,
+                color: icon === '🔴' ? 'var(--red)' : icon === '🟡' ? 'var(--yellow)' : 'var(--green)'
+            });
+            return {
+                trend: mk(backendTrend, s?.Trend_Reason, s?.Trend_Icon),
+                setup: mk(backendSetup, s?.Setup_Reason, s?.Setup_Icon),
+                risk: mk(backendRisk, s?.Risk_Reason, s?.Risk_Icon),
+            };
+        }
+
         const trend = trendSignal(s);
         const setup = setupSignal(s, trend);
         const risk  = riskSignal(s, trend, setup);
@@ -458,7 +484,9 @@
     }
 
     function getRelativeStrength3M(stock, indexStock) {
-        // Bruk opptil ~60 dager når mulig, men tillat kortere historikk for å unngå unødvendig N/A.
+        const backend = normNumber(stock?.RS_3m_vs_OSEBX, NaN);
+        if (Number.isFinite(backend)) return backend;
+
         if (!stock || !indexStock || !Array.isArray(stock.Historikk) || !Array.isArray(indexStock.Historikk)) return NaN;
         const maxDaysStock = Math.max(0, stock.Historikk.length - 1);
         const maxDaysIndex = Math.max(0, indexStock.Historikk.length - 1);
@@ -491,7 +519,9 @@
     }
 
     function computeCompositeScore(stock, indexStock) {
-        // Poengmodell (maks 12): relativ styrke (3M), trendstruktur, trendstyrke, RSI og MACD.
+        const backend = getBackendComposite(stock);
+        if (backend) return backend;
+
         const rsi = safeNum(stock?.RSI_14, NaN);
         const price = getLastPrice(stock);
         const sma50 = safeNum(stock?.SMA_50, NaN);
@@ -509,7 +539,6 @@
         if (!hasRequiredData) return null;
 
         let score = 0;
-
         if (relStrength3M > 0) score += 3;
         if (price > sma50) score += 2;
         if (sma50 > sma200) score += 2;
@@ -597,6 +626,23 @@
         }
         const n = Number(v);
         return Number.isFinite(n) ? n : fallback;
+    }
+
+    function fmt(v, digits = 1, suffix = '') {
+        const n = normNumber(v, NaN);
+        return Number.isFinite(n) ? `${n.toFixed(digits)}${suffix}` : 'N/A';
+    }
+
+    function getBackendComposite(stock) {
+        const score = normNumber(stock?.Composite_Score, NaN);
+        const maxScore = normNumber(stock?.Composite_Max, 12);
+        const label = stock?.Composite_Label;
+        if (!Number.isFinite(score) || !label) return null;
+        return {
+            score,
+            maxScore,
+            classification: getCompositeLabel(score)
+        };
     }
 
     function pickDate(h, idx) {
@@ -717,10 +763,11 @@
 
         document.getElementById('detailBodyContent').innerHTML = `
             <div class="info-grid">
-                <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${safeNum(s.RSI_14, 50).toFixed(1)}</div></div>
-                <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${safeNum(s.Volum_vs_Snitt, 0).toFixed(0)}%</div></div>
-                <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">R/R <i class="info-i">ⓘ</i></div><div class="val">${safeNum(s.Risk_Reward, 0).toFixed(2)}</div></div>
-                <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
+                <div class="info-box" onclick="showTip(event, 'rsi')"><div class="label">RSI <i class="info-i">ⓘ</i></div><div class="val">${fmt(s.RSI_14, 1)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'atr')"><div class="label">ATR % <i class="info-i">ⓘ</i></div><div class="val">${fmt(s.ATR_pct, 2, '%')}</div><div class="muted-mini">ATR: ${fmt(s.ATR_14, 2)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${fmt(s.Volum_vs_Snitt, 0, '%')}</div><div class="muted-mini">20d snitt: ${fmt(s.Avg_Volume_20, 0)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">R/R <i class="info-i">ⓘ</i></div><div class="val">${fmt(s.Risk_Reward, 2)}</div></div>
+                <div class="info-box" onclick="showTip(event, 'rs')"><div class="label">RS 3M <i class="info-i">ⓘ</i></div><div class="val" style="color:${safeNum(s.RS_3m_vs_OSEBX, 0) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(s.RS_3m_vs_OSEBX, 1, '%')}</div></div>
                 <div class="info-box"><div class="label">Composite</div><div class="val" style="color:${composite ? composite.classification.color : 'var(--secondary)'};">${composite ? `${composite.score}/${composite.maxScore} · ${composite.classification.label}` : 'N/A'}</div></div>
             </div>
 
@@ -765,7 +812,10 @@
                 <div class="label" style="margin-bottom:12px;">Relativ styrke vs OSEBX</div>
                 <div class="rel-grid">
                     ${perioder.map(p => {
-                        const diff = getPerf(s, p.d) - getPerf(index, p.d);
+                        const keyMap = { '1M':'RS_1m_vs_OSEBX', '3M':'RS_3m_vs_OSEBX', '6M':'RS_6m_vs_OSEBX', '1Å':'RS_12m_vs_OSEBX' };
+                        let diff = Number.NaN;
+                        if (keyMap[p.l]) diff = safeNum(s[keyMap[p.l]], NaN);
+                        if (!Number.isFinite(diff)) diff = getPerf(s, p.d) - getPerf(index, p.d);
                         return `<div><div style="font-size:10px;color:var(--secondary);font-weight:800;">${p.l}</div>
                                 <div style="font-size:12px;font-weight:700;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${diff.toFixed(1)}%</div></div>`;
                     }).join('')}
@@ -773,8 +823,12 @@
             </div>
 
             <div class="tech-list">
-                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 50 / 200 ⓘ</span><b>${safeNum(s.SMA_50, 0).toFixed(1)} / ${safeNum(s.SMA_200, 0).toFixed(1)}</b></div>
-                <div class="tech-row" style="border:none;" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${safeNum(s.EMA_9, 0).toFixed(1)} / ${safeNum(s.EMA_20, 0).toFixed(1)} / ${safeNum(s.EMA_200, 0).toFixed(1)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 20 / 50 / 200 ⓘ</span><b>${fmt(s.SMA_20, 1)} / ${fmt(s.SMA_50, 1)} / ${fmt(s.SMA_200, 1)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${fmt(s.EMA_9, 1)} / ${fmt(s.EMA_20, 1)} / ${fmt(s.EMA_200, 1)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / motstand 50d ⓘ</span><b>${fmt(s.Support_50, 1)} / ${fmt(s.Resistance_50, 1)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'macd')"><span>MACD / signal / hist ⓘ</span><b>${fmt(s.MACD, 3)} / ${fmt(s.MACD_Signal, 3)} / ${fmt(s.MACD_Hist, 3)}</b></div>
+                <div class="tech-row" onclick="showTip(event, 'ret')"><span>Avkastning 1M / 3M / 6M / 12M ⓘ</span><b>${fmt(s.Return_1m, 1, '%')} / ${fmt(s.Return_3m, 1, '%')} / ${fmt(s.Return_6m, 1, '%')} / ${fmt(s.Return_12m, 1, '%')}</b></div>
+                <div class="tech-row" style="border:none;" onclick="showTip(event, 'high52')"><span>52u høy / lav og avstand ⓘ</span><b>${fmt(s.High_52w, 1)} / ${fmt(s.Low_52w, 1)} · ${fmt(s.Distance_to_52w_High_pct, 1, '%')} fra høy</b></div>
             </div>
 
             <div class="list-actions">
@@ -1011,7 +1065,8 @@
         const activeBtn = document.getElementById('btn-' + currentSort);
         if(activeBtn) {
             activeBtn.classList.add('active-sort');
-            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort === 'score' ? 'SCORE' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
+            const sortNames = { score:'SCORE', rsi:'RSI', volum:'VOL %', rr:'R/R', rs:'RS 3M', atr:'ATR %', ticker:'NAVN' };
+            activeBtn.innerHTML = (sortNames[currentSort] || currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
         }
 
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
@@ -1033,6 +1088,8 @@
             else if(currentSort === 'rsi') { vA = safeNum(a.RSI_14, 0); vB = safeNum(b.RSI_14, 0); }
             else if(currentSort === 'volum') { vA = safeNum(a.Volum_vs_Snitt, 0); vB = safeNum(b.Volum_vs_Snitt, 0); }
             else if(currentSort === 'rr') { vA = safeNum(a.Risk_Reward, 0); vB = safeNum(b.Risk_Reward, 0); }
+            else if(currentSort === 'rs') { vA = safeNum(a.RS_3m_vs_OSEBX, -9999); vB = safeNum(b.RS_3m_vs_OSEBX, -9999); }
+            else if(currentSort === 'atr') { vA = safeNum(a.ATR_pct, -9999); vB = safeNum(b.ATR_pct, -9999); }
             else { vA = a.Aksje; vB = b.Aksje; }
             return isAscending ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
         });
@@ -1073,10 +1130,10 @@
                 </div>
                 <div class="row-indicators">
                     <div class="mini-stat"><span class="label">RSI</span><span class="val" style="color:${rsiColor};">${rsiVal.toFixed(0)}</span></div>
-                    <div class="mini-stat"><span class="label">VOL %</span><span class="val">${safeNum(s.Volum_vs_Snitt, 0).toFixed(0)}%</span></div>
-                    <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend || ""}</span></div>
-                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${safeNum(s.Risk_Reward, 0).toFixed(1)}</span></div>
-                    <div class="mini-stat"><span class="label">Score</span><span class="val" style="color:${composite ? composite.classification.color : 'var(--secondary)'};">${composite ? `${composite.score}/${composite.maxScore}` : 'N/A'}</span></div>
+                    <div class="mini-stat"><span class="label">VOL %</span><span class="val">${fmt(s.Volum_vs_Snitt, 0, '%')}</span></div>
+                    <div class="mini-stat"><span class="label">RS 3M</span><span class="val" style="color:${safeNum(s.RS_3m_vs_OSEBX, 0) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(s.RS_3m_vs_OSEBX, 1, '%')}</span></div>
+                    <div class="mini-stat"><span class="label">ATR %</span><span class="val">${fmt(s.ATR_pct, 1, '%')}</span></div>
+                    <div class="mini-stat"><span class="label">R/R</span><span class="val">${fmt(s.Risk_Reward, 1)}</span></div>
                 </div>
             </div>`;
         }).join('');
