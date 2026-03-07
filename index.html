@@ -35,7 +35,7 @@
         .filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .filter-btn { flex: 1; font-weight: 600; }
         .active-filter { background: var(--blue) !important; }
-        .sort-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        .sort-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .active-sort { border: 1px solid var(--blue) !important; color: var(--blue); }
 
         .stock-card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
@@ -47,6 +47,7 @@
         .sig-dot { font-size: 16px; line-height: 1; filter: saturate(1.1); }
 
         .list-badge { font-size: 9px; background: #3a3a3c; padding: 2px 5px; border-radius: 4px; color: var(--orange); font-weight: 900; }
+        .score-badge { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 800; margin-left: 6px; }
         .profit-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px;}
         .row-indicators { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #2c2c2e; }
         .mini-stat { display: flex; flex-direction: column; }
@@ -165,6 +166,7 @@
     </div>
     <input type="text" id="search" placeholder="Søk ticker eller navn..." onkeyup="render()">
     <div class="sort-row">
+        <div id="btn-score" class="sort-btn" onclick="setSort('score')">Score</div>
         <div id="btn-rsi" class="sort-btn" onclick="setSort('rsi')">RSI</div>
         <div id="btn-volum" class="sort-btn" onclick="setSort('volum')">Vol %</div>
         <div id="btn-rr" class="sort-btn" onclick="setSort('rr')">R/R</div>
@@ -447,6 +449,72 @@
         return { icon:'⚪️', color:'var(--secondary)' };
     }
 
+    function getPerfForDays(stock, days) {
+        if (!stock || !Array.isArray(stock.Historikk) || stock.Historikk.length < (days + 1)) return NaN;
+        const start = safeNum(stock.Historikk[stock.Historikk.length - (days + 1)]?.close, NaN);
+        const last = getLastPrice(stock);
+        if (!Number.isFinite(start) || !Number.isFinite(last) || start === 0) return NaN;
+        return ((last - start) / start) * 100;
+    }
+
+    function getRelativeStrength3M(stock, indexStock) {
+        // Bruk opptil ~60 dager når mulig, men tillat kortere historikk for å unngå unødvendig N/A.
+        if (!stock || !indexStock || !Array.isArray(stock.Historikk) || !Array.isArray(indexStock.Historikk)) return NaN;
+        const maxDaysStock = Math.max(0, stock.Historikk.length - 1);
+        const maxDaysIndex = Math.max(0, indexStock.Historikk.length - 1);
+        const days = Math.min(60, maxDaysStock, maxDaysIndex);
+        if (days < 20) return NaN;
+
+        const stockPerf = getPerfForDays(stock, days);
+        const indexPerf = getPerfForDays(indexStock, days);
+        if (!Number.isFinite(stockPerf) || !Number.isFinite(indexPerf)) return NaN;
+        return stockPerf - indexPerf;
+    }
+
+    function getCompositeLabel(score) {
+        if (score >= 9) return { label: 'Sterk', color: 'var(--green)', bg: 'rgba(50,215,75,0.2)' };
+        if (score >= 5) return { label: 'Nøytral', color: 'var(--yellow)', bg: 'rgba(255,214,10,0.2)' };
+        return { label: 'Svak', color: 'var(--red)', bg: 'rgba(255,69,58,0.2)' };
+    }
+
+    function computeCompositeScore(stock, indexStock) {
+        // Poengmodell (maks 12): relativ styrke (3M), trendstruktur, trendstyrke, RSI og MACD.
+        const rsi = safeNum(stock?.RSI_14, NaN);
+        const price = getLastPrice(stock);
+        const sma50 = safeNum(stock?.SMA_50, NaN);
+        const sma200 = safeNum(stock?.SMA_200, NaN);
+        const relStrength3M = getRelativeStrength3M(stock, indexStock);
+        const macdTrend = (stock?.MACD_Trend || '').toString().trim().toLowerCase();
+
+        const hasRequiredData = Number.isFinite(rsi)
+            && Number.isFinite(price)
+            && Number.isFinite(sma50)
+            && Number.isFinite(sma200)
+            && Number.isFinite(relStrength3M)
+            && !!macdTrend;
+
+        if (!hasRequiredData) return null;
+
+        let score = 0;
+
+        if (relStrength3M > 0) score += 3;
+        if (price > sma50) score += 2;
+        if (sma50 > sma200) score += 2;
+
+        const trendStrength = (price - sma50) / sma50;
+        if (trendStrength > 0.10) score += 2;
+        else if (trendStrength >= 0.03) score += 1;
+
+        if (rsi >= 45 && rsi <= 65) score += 2;
+        if (macdTrend === 'bull') score += 1;
+
+        return {
+            score,
+            maxScore: 12,
+            classification: getCompositeLabel(score)
+        };
+    }
+
     async function load() {
         try {
             const res = await fetch(DATA_URL, { cache: "no-store" });
@@ -622,12 +690,14 @@
         const perioder = [{l:'1U',d:5}, {l:'1M',d:21}, {l:'3M',d:63}, {l:'6M',d:126}, {l:'1Å',d:250}];
 
         const sigs = computeThreeSignals(s);
+        const composite = computeCompositeScore(s, index);
 
         document.getElementById('detailHeaderInfo').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:32px; font-weight:900;">${s.Aksje}</div>
                 <div style="font-size:14px; color:var(--secondary); font-weight:700;">${s.Navn || ""}</div>
                 <div style="font-size:26px; font-weight:800; margin-top:10px;">${Number(getLastPrice(s)).toFixed(2)}</div>
+                <div style="margin-top:8px;"><span class="score-badge" style="background:${composite ? composite.classification.bg : '#3a3a3c'}; color:${composite ? composite.classification.color : 'var(--secondary)'}; font-size:12px;">Composite Score: ${composite ? `${composite.score}/${composite.maxScore}` : 'N/A'}${composite ? ` · ${composite.classification.label}` : ''}</span></div>
                 ${profitHtml}
             </div>
         `;
@@ -638,6 +708,7 @@
                 <div class="info-box" onclick="showTip(event, 'volum')"><div class="label">Vol % <i class="info-i">ⓘ</i></div><div class="val">${safeNum(s.Volum_vs_Snitt, 0).toFixed(0)}%</div></div>
                 <div class="info-box" onclick="showTip(event, 'rr')"><div class="label">R/R <i class="info-i">ⓘ</i></div><div class="val">${safeNum(s.Risk_Reward, 0).toFixed(2)}</div></div>
                 <div class="info-box" onclick="showTip(event, 'trend')"><div class="label">Trend <i class="info-i">ⓘ</i></div><div class="val" style="color:${s.MACD_Trend==='Bull'?'var(--green)':'var(--red)'}">${s.MACD_Trend}</div></div>
+                <div class="info-box"><div class="label">Composite</div><div class="val" style="color:${composite ? composite.classification.color : 'var(--secondary)'};">${composite ? `${composite.score}/${composite.maxScore} · ${composite.classification.label}` : 'N/A'}</div></div>
             </div>
 
             <div class="signal-box">
@@ -927,16 +998,26 @@
         const activeBtn = document.getElementById('btn-' + currentSort);
         if(activeBtn) {
             activeBtn.classList.add('active-sort');
-            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
+            activeBtn.innerHTML = (currentSort === 'volum' ? 'VOL %' : currentSort === 'score' ? 'SCORE' : currentSort.toUpperCase()) + (isAscending ? "↑" : "↓");
         }
 
         let filtered = stocks.filter(s => (s.Aksje.toUpperCase().includes(query) || (s.Navn && s.Navn.toUpperCase().includes(query))));
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
 
+        const indexStock = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0] || null;
+
         filtered.sort((a, b) => {
             let vA, vB;
-            if(currentSort === 'rsi') { vA = safeNum(a.RSI_14, 0); vB = safeNum(b.RSI_14, 0); }
+            if(currentSort === 'score') {
+                const scoreA = computeCompositeScore(a, indexStock);
+                const scoreB = computeCompositeScore(b, indexStock);
+                if (!scoreA && !scoreB) return 0;
+                if (!scoreA) return 1;
+                if (!scoreB) return -1;
+                vA = scoreA.score; vB = scoreB.score;
+            }
+            else if(currentSort === 'rsi') { vA = safeNum(a.RSI_14, 0); vB = safeNum(b.RSI_14, 0); }
             else if(currentSort === 'volum') { vA = safeNum(a.Volum_vs_Snitt, 0); vB = safeNum(b.Volum_vs_Snitt, 0); }
             else if(currentSort === 'rr') { vA = safeNum(a.Risk_Reward, 0); vB = safeNum(b.Risk_Reward, 0); }
             else { vA = a.Aksje; vB = b.Aksje; }
@@ -944,6 +1025,7 @@
         });
 
         document.getElementById('list').innerHTML = filtered.map(s => {
+            const composite = computeCompositeScore(s, indexStock);
             const gav = myGAVs[s.Aksje];
             let profitHtml = "";
             if (gav) {
@@ -962,7 +1044,9 @@
             return `<div class="stock-card" onclick="openDetail('${s.Aksje}')">
                 <div class="row-top">
                     <div style="display:flex; flex-direction:column;">
-                        <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${profitHtml}</span>
+                        <span class="ticker">${s.Aksje} ${myStocks.includes(s.Aksje)?'<span class="list-badge">MINE</span>':''} ${profitHtml}
+                            <span class="score-badge" style="background:${composite ? composite.classification.bg : '#3a3a3c'}; color:${composite ? composite.classification.color : 'var(--secondary)'};">${composite ? `${composite.score}/${composite.maxScore} ${composite.classification.label}` : 'N/A'}</span>
+                        </span>
                         <span style="font-size:11px; color:var(--secondary); font-weight:600; margin-top:2px;">${s.Navn || ""}</span>
                     </div>
                     <span class="price">
@@ -979,6 +1063,7 @@
                     <div class="mini-stat"><span class="label">VOL %</span><span class="val">${safeNum(s.Volum_vs_Snitt, 0).toFixed(0)}%</span></div>
                     <div class="mini-stat"><span class="label">Trend</span><span class="val">${s.MACD_Trend || ""}</span></div>
                     <div class="mini-stat"><span class="label">R/R</span><span class="val">${safeNum(s.Risk_Reward, 0).toFixed(1)}</span></div>
+                    <div class="mini-stat"><span class="label">Score</span><span class="val" style="color:${composite ? composite.classification.color : 'var(--secondary)'};">${composite ? `${composite.score}/${composite.maxScore}` : 'N/A'}</span></div>
                 </div>
             </div>`;
         }).join('');
