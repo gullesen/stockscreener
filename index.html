@@ -457,6 +457,20 @@
         return ((last - start) / start) * 100;
     }
 
+    function getRelativeStrength3M(stock, indexStock) {
+        // Bruk opptil ~60 dager når mulig, men tillat kortere historikk for å unngå unødvendig N/A.
+        if (!stock || !indexStock || !Array.isArray(stock.Historikk) || !Array.isArray(indexStock.Historikk)) return NaN;
+        const maxDaysStock = Math.max(0, stock.Historikk.length - 1);
+        const maxDaysIndex = Math.max(0, indexStock.Historikk.length - 1);
+        const days = Math.min(60, maxDaysStock, maxDaysIndex);
+        if (days < 20) return NaN;
+
+        const stockPerf = getPerfForDays(stock, days);
+        const indexPerf = getPerfForDays(indexStock, days);
+        if (!Number.isFinite(stockPerf) || !Number.isFinite(indexPerf)) return NaN;
+        return stockPerf - indexPerf;
+    }
+
     function getCompositeLabel(score) {
         if (score >= 9) return { label: 'Sterk', color: 'var(--green)', bg: 'rgba(50,215,75,0.2)' };
         if (score >= 5) return { label: 'Nøytral', color: 'var(--yellow)', bg: 'rgba(255,214,10,0.2)' };
@@ -469,9 +483,7 @@
         const price = getLastPrice(stock);
         const sma50 = safeNum(stock?.SMA_50, NaN);
         const sma200 = safeNum(stock?.SMA_200, NaN);
-        const stockPerf3M = getPerfForDays(stock, 60);
-        const indexPerf3M = getPerfForDays(indexStock, 60);
-        const relStrength3M = stockPerf3M - indexPerf3M;
+        const relStrength3M = getRelativeStrength3M(stock, indexStock);
         const macdTrend = (stock?.MACD_Trend || '').toString().trim().toLowerCase();
 
         const hasRequiredData = Number.isFinite(rsi)
@@ -993,7 +1005,7 @@
         if (currentFilter === 'mine') filtered = filtered.filter(s => myStocks.includes(s.Aksje));
         if (currentFilter === 'radar') filtered = filtered.filter(s => radarStocks.includes(s.Aksje));
 
-        const indexStock = stocks.find(x => x.Aksje === "OSEBX.OL") || null;
+        const indexStock = stocks.find(x => x.Aksje === "OSEBX.OL") || stocks[0] || null;
 
         filtered.sort((a, b) => {
             let vA, vB;
