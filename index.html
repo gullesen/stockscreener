@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="no">
 <head>
     <meta charset="UTF-8">
@@ -57,6 +57,10 @@
 
         #detailPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000;
+            display: none; overflow-y: auto; padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
+        }
+        #alertPage {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2100;
             display: none; overflow-y: auto; padding: env(safe-area-inset-top) 20px 140px 20px; box-sizing: border-box;
         }
         .detail-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -129,7 +133,7 @@
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
         .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .rel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; text-align: center; }
-        .list-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+        .list-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
         .action-btn { padding: 14px; border-radius: 12px; border: 1px solid #3a3a3c; background: transparent; color: white; font-size: 13px; font-weight: 600; }
         .time-row { display: flex; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
         .time-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: var(--secondary); border-radius: 8px; }
@@ -140,6 +144,9 @@
         .alert-helper { font-size: 12px; color: var(--secondary); margin-top: 8px; line-height: 1.35; }
         .alert-status { font-size: 12px; color: var(--blue); font-weight: 600; margin-top: 8px; }
         .alert-btn { background: transparent; border: 1px solid #3a3a3c; color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+        .alert-page-header { text-align: center; margin-bottom: 20px; }
+        .alert-page-title { font-size: 30px; font-weight: 900; }
+        .alert-page-subtitle { font-size: 14px; color: var(--secondary); font-weight: 700; margin-top: 4px; }
         .user-data-section { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 10px; }
         #tooltipToast {
             position: fixed; bottom: -150px; left: 20px; right: 20px; background: #2c2c2e; color: white;
@@ -198,6 +205,12 @@
     </div>
 
     <div id="detailBodyContent"></div>
+</div>
+
+<div id="alertPage">
+    <div class="detail-nav"><div class="back-btn" onclick="closeAlerts()">← Tilbake</div></div>
+    <div id="alertHeaderInfo"></div>
+    <div id="alertBodyContent"></div>
 </div>
 
 <div id="tooltipToast" onclick="hideTip()"></div>
@@ -730,7 +743,6 @@
 
         const gav = myGAVs[ticker] || "";
         const note = myNotes[ticker] || "";
-        const alertCfg = getRsiAlertConfig(ticker);
 
         let profitHtml = "";
         if (gav) {
@@ -834,13 +846,40 @@
             <div class="list-actions">
                 <button class="action-btn ${myStocks.includes(ticker)?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${myStocks.includes(ticker)?'✓ Mine':' + Mine'}</button>
                 <button class="action-btn ${radarStocks.includes(ticker)?'active-radar':''}" onclick="toggleList('${ticker}', 'radar')">${radarStocks.includes(ticker)?'✓ Radar':' + Radar'}</button>
+                <button class="action-btn" onclick="event.stopPropagation(); openAlerts('${ticker}')">Varsler</button>
             </div>
 
+            <div class="user-data-section">
+                <div class="user-data-title">Mine data</div>
+                <input type="number" class="gav-input" id="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
+                <textarea placeholder="Strategi & Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
+            </div>
+        `;
+
+        document.getElementById('detailPage').style.display = 'block';
+        requestAnimationFrame(() => updateChart(30, ticker));
+    }
+
+    function openAlerts(ticker) {
+        currentTicker = ticker;
+        const s = stocks.find(x => x.Aksje === ticker);
+        if (!s) return;
+
+        const alertCfg = getRsiAlertConfig(ticker);
+
+        document.getElementById('alertHeaderInfo').innerHTML = `
+            <div class="alert-page-header">
+                <div class="alert-page-title">Varsler</div>
+                <div class="alert-page-subtitle">${s.Aksje}${s.Navn ? ` · ${s.Navn}` : ''}</div>
+            </div>
+        `;
+
+        document.getElementById('alertBodyContent').innerHTML = `
             <div class="alert-section">
                 <div class="user-data-title">RSI-varsler til nettleser/telefon</div>
                 <div class="alert-row">
-                    <input type="number" min="1" max="99" step="0.1" class="alert-input" value="${alertCfg.threshold ?? ''}" placeholder="f.eks. 70" onchange="saveRsiAlert('${ticker}', this.value, this.parentElement.querySelector('select').value)">
-                    <select class="alert-select" onchange="saveRsiAlert('${ticker}', this.parentElement.querySelector('input').value, this.value)">
+                    <input type="number" min="1" max="99" step="0.1" class="alert-input" value="${alertCfg.threshold ?? ''}" placeholder="f.eks. 70" onchange="saveRsiAlert('${ticker}', this.value, this.parentElement.querySelector('select').value, true)">
+                    <select class="alert-select" onchange="saveRsiAlert('${ticker}', this.parentElement.querySelector('input').value, this.value, true)">
                         <option value="above" ${alertCfg.direction === 'above' ? 'selected' : ''}>Stiger over</option>
                         <option value="below" ${alertCfg.direction === 'below' ? 'selected' : ''}>Synker under</option>
                     </select>
@@ -857,16 +896,9 @@
                                 : 'Klikk "Aktiver varsler" for å tillate varsler.'
                 }</div>
             </div>
-
-            <div class="user-data-section">
-                <div class="user-data-title">Mine data</div>
-                <input type="number" class="gav-input" id="gav-input" value="${gav}" placeholder="Din GAV..." onchange="saveData('${ticker}', 'gav', this.value)">
-                <textarea placeholder="Strategi & Notater..." onchange="saveData('${ticker}', 'note', this.value)">${note}</textarea>
-            </div>
         `;
 
-        document.getElementById('detailPage').style.display = 'block';
-        requestAnimationFrame(() => updateChart(30, ticker));
+        document.getElementById('alertPage').style.display = 'block';
     }
 
     function updateChart(dager, ticker) {
@@ -1177,7 +1209,10 @@
         if (typeof Notification === 'undefined') return;
         try {
             await Notification.requestPermission();
-            if (currentTicker) openDetail(currentTicker);
+            if (currentTicker) {
+                openDetail(currentTicker);
+                if (document.getElementById('alertPage').style.display === 'block') openAlerts(currentTicker);
+            }
         } catch (_) {}
     }
 
@@ -1192,7 +1227,7 @@
         return { threshold: null, direction: 'above' };
     }
 
-    function saveRsiAlert(ticker, rawValue, rawDirection = 'above') {
+    function saveRsiAlert(ticker, rawValue, rawDirection = 'above', reopenAlertsPage = false) {
         const value = Number(rawValue);
         const direction = rawDirection === 'below' ? 'below' : 'above';
         if (!Number.isFinite(value)) {
@@ -1205,7 +1240,10 @@
         }
         localStorage.setItem('rsiAlerts', JSON.stringify(rsiAlerts));
         localStorage.setItem('rsiAlertState', JSON.stringify(rsiAlertState));
-        if (currentTicker === ticker) openDetail(ticker);
+        if (currentTicker === ticker) {
+            openDetail(ticker);
+            if (reopenAlertsPage) openAlerts(ticker);
+        }
     }
 
     function evaluateRsiAlerts() {
@@ -1246,7 +1284,12 @@
         localStorage.setItem('rsiAlertState', JSON.stringify(rsiAlertState));
     }
 
-    function closeDetail() { document.getElementById('detailPage').style.display = 'none'; }
+    function closeAlerts() { document.getElementById('alertPage').style.display = 'none'; }
+
+    function closeDetail() {
+        document.getElementById('alertPage').style.display = 'none';
+        document.getElementById('detailPage').style.display = 'none';
+    }
 
     // Start
     load();
