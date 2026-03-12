@@ -131,6 +131,64 @@
 
         .tech-list { background: var(--card); border-radius: 15px; padding: 5px 15px; margin-bottom: 20px; }
         .tech-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2c2e; font-size: 14px; }
+        .key-levels-card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #2c2c2e;
+        }
+        .key-levels-title {
+            font-size: 10px;
+            color: var(--secondary);
+            font-weight: 900;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .key-levels-grid { display: grid; gap: 10px; }
+        .key-level-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 13px;
+            border-radius: 12px;
+            border: 1px solid #2c2c2e;
+            background: rgba(255,255,255,0.02);
+        }
+        .key-level-row.primary { padding: 14px 13px; }
+        .key-level-row.resistance {
+            border-color: rgba(255, 69, 58, 0.28);
+            background: rgba(255, 69, 58, 0.08);
+        }
+        .key-level-row.support {
+            border-color: rgba(50, 215, 75, 0.28);
+            background: rgba(50, 215, 75, 0.08);
+        }
+        .key-level-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .key-level-label { font-size: 12px; font-weight: 900; letter-spacing: 0.2px; }
+        .key-level-meta { font-size: 11px; color: var(--secondary); font-weight: 650; }
+        .key-level-value {
+            font-size: 17px;
+            font-weight: 800;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .key-level-row.primary .key-level-value { font-size: 18px; }
+        .key-level-empty {
+            font-size: 13px;
+            color: var(--secondary);
+            font-weight: 650;
+            padding: 4px 0;
+        }
+        .key-level-note {
+            font-size: 11px;
+            color: var(--secondary);
+            font-weight: 600;
+            margin-top: 12px;
+            line-height: 1.35;
+        }
         .rel-strength-box { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .rel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; text-align: center; }
         .list-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
@@ -646,6 +704,81 @@
         return Number.isFinite(n) ? `${n.toFixed(digits)}${suffix}` : 'N/A';
     }
 
+    function isValidLevelNumber(value) {
+        const n = normNumber(value, NaN);
+        return Number.isFinite(n) && n !== 0;
+    }
+
+    function getZoneLevel(stock, key) {
+        const rawLow = stock?.[`${key}_Low`];
+        const rawHigh = stock?.[`${key}_High`];
+        if (!isValidLevelNumber(rawLow) || !isValidLevelNumber(rawHigh)) return null;
+
+        const low = normNumber(rawLow, NaN);
+        const high = normNumber(rawHigh, NaN);
+        return {
+            low: Math.min(low, high),
+            high: Math.max(low, high)
+        };
+    }
+
+    function buildZoneText(level) {
+        if (!level) return '';
+        return `${fmt(level.low, 1)}&ndash;${fmt(level.high, 1)}`;
+    }
+
+    function renderKeyLevelsCard(stock) {
+        const isAllTimeHigh = stock?.Is_All_Time_High === true;
+        const isAllTimeLow = stock?.Is_All_Time_Low === true;
+        const nextResistance = isAllTimeHigh ? null : getZoneLevel(stock, 'Resistance_1');
+        const nextSupport = isAllTimeLow ? null : getZoneLevel(stock, 'Support_1');
+        const secondarySupport = isAllTimeLow ? null : getZoneLevel(stock, 'Support_2');
+        const secondaryResistance = isAllTimeHigh ? null : getZoneLevel(stock, 'Resistance_2');
+
+        const levels = [
+            {
+                label: 'Neste motstand',
+                type: 'resistance',
+                priority: 'primary',
+                data: nextResistance,
+                fallbackText: nextResistance ? '' : 'Ingen motstand',
+                fallbackMeta: 'Ingen historiske motstandssoner over dagens kurs'
+            },
+            {
+                label: 'Neste støtte',
+                type: 'support',
+                priority: 'primary',
+                data: nextSupport,
+                fallbackText: nextSupport ? '' : 'Ingen støtte',
+                fallbackMeta: 'Ingen historiske støttesoner under dagens kurs'
+            },
+            { label: 'Sekundær motstand', type: 'resistance', priority: 'secondary', data: secondaryResistance },
+            { label: 'Sekundær støtte', type: 'support', priority: 'secondary', data: secondarySupport }
+        ].filter(item => item.data || item.fallbackText);
+
+        const body = levels.length
+            ? `<div class="key-levels-grid">
+                ${levels.map(item => `
+                    <div class="key-level-row ${item.type} ${item.priority}">
+                        <div class="key-level-copy">
+                            <div class="key-level-label">${item.label}</div>
+                            <div class="key-level-meta">${item.data ? (item.type === 'resistance' ? 'Sone der salgspress ofte kan dukke opp' : 'Sone der kjøpere ofte forsvarer kursen') : item.fallbackMeta}</div>
+                        </div>
+                        <div class="key-level-value">${item.data ? buildZoneText(item.data) : item.fallbackText}</div>
+                    </div>
+                `).join('')}
+            </div>`
+            : `<div class="key-level-empty">Nivåer ikke tilgjengelig</div>`;
+
+        return `
+            <div class="key-levels-card">
+                <div class="key-levels-title">Nøkkelnivåer</div>
+                ${body}
+                ${levels.length ? '<div class="key-level-note">Nærmeste støtte og motstand er mest relevante på kort sikt.</div>' : ''}
+            </div>
+        `;
+    }
+
     function getBackendComposite(stock) {
         const score = normNumber(stock?.Composite_Score, NaN);
         const maxScore = normNumber(stock?.Composite_Max, 12);
@@ -837,11 +970,12 @@
             <div class="tech-list">
                 <div class="tech-row" onclick="showTip(event, 'sma')"><span>SMA 20 / 50 / 200 ⓘ</span><b>${fmt(s.SMA_20, 1)} / ${fmt(s.SMA_50, 1)} / ${fmt(s.SMA_200, 1)}</b></div>
                 <div class="tech-row" onclick="showTip(event, 'ema')"><span>EMA 9 / 20 / 200 ⓘ</span><b>${fmt(s.EMA_9, 1)} / ${fmt(s.EMA_20, 1)} / ${fmt(s.EMA_200, 1)}</b></div>
-                <div class="tech-row" onclick="showTip(event, 'support')"><span>Støtte / motstand 50d ⓘ</span><b>${fmt(s.Support_50, 1)} / ${fmt(s.Resistance_50, 1)}</b></div>
                 <div class="tech-row" onclick="showTip(event, 'macd')"><span>MACD / signal / hist ⓘ</span><b>${fmt(s.MACD, 3)} / ${fmt(s.MACD_Signal, 3)} / ${fmt(s.MACD_Hist, 3)}</b></div>
                 <div class="tech-row" onclick="showTip(event, 'ret')"><span>Avkastning 1M / 3M / 6M / 12M ⓘ</span><b>${fmt(s.Return_1m, 1, '%')} / ${fmt(s.Return_3m, 1, '%')} / ${fmt(s.Return_6m, 1, '%')} / ${fmt(s.Return_12m, 1, '%')}</b></div>
                 <div class="tech-row" style="border:none;" onclick="showTip(event, 'high52')"><span>52u høy / lav og avstand ⓘ</span><b>${fmt(s.High_52w, 1)} / ${fmt(s.Low_52w, 1)} · ${fmt(s.Distance_to_52w_High_pct, 1, '%')} fra høy</b></div>
             </div>
+
+            ${renderKeyLevelsCard(s)}
 
             <div class="list-actions">
                 <button class="action-btn ${myStocks.includes(ticker)?'active-mine':''}" onclick="toggleList('${ticker}', 'mine')">${myStocks.includes(ticker)?'✓ Mine':' + Mine'}</button>
